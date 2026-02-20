@@ -1,0 +1,1280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Prototype Quiz Maker</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#121a33;
+      --panel2:#0f1730;
+      --text:#e9eefc;
+      --muted:#a9b6e6;
+      --border:rgba(255,255,255,.12);
+      --accent:#7aa2ff;
+      --danger:#ff6b6b;
+      --ok:#4cd964;
+      --warn:#ffd166;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 14px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 20% -10%, rgba(122,162,255,.22), transparent 60%),
+                  radial-gradient(900px 700px at 90% 0%, rgba(255,209,102,.12), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    header{
+      position:sticky;
+      top:0;
+      z-index:10;
+      background: rgba(11,16,32,.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 14px 16px;
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+    }
+    .status{
+      font-size:12px;
+      color: var(--muted);
+      margin-top:4px;
+    }
+    .brand{display:flex;flex-direction:column}
+    .tabs{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    button{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      transition: transform .05s ease, background .2s ease, border-color .2s ease;
+      font-weight: 600;
+      letter-spacing:.2px;
+    }
+    button:hover{ background: rgba(255,255,255,.1); }
+    button:active{ transform: translateY(1px); }
+    button:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
+    .tab.active{
+      background: rgba(122,162,255,.18);
+      border-color: rgba(122,162,255,.4);
+    }
+    .primary{
+      background: rgba(122,162,255,.22);
+      border-color: rgba(122,162,255,.5);
+    }
+    .primary:hover{ background: rgba(122,162,255,.28); }
+    .secondary{
+      background: rgba(255,255,255,.06);
+    }
+    .danger{
+      background: rgba(255,107,107,.14);
+      border-color: rgba(255,107,107,.45);
+    }
+    .danger:hover{ background: rgba(255,107,107,.18); }
+    .link{
+      background: transparent;
+      border-color: transparent;
+      color: var(--muted);
+      padding: 8px 0;
+      font-weight: 700;
+    }
+    .link:hover{
+      background: transparent;
+      border-color: transparent;
+      color: var(--text);
+      text-decoration: underline;
+    }
+
+    main{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px 16px 60px;
+    }
+    .view{ display:none; }
+    .view.active{ display:block; }
+
+    .grid{
+      display:grid;
+      gap: 14px;
+    }
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+    .panel h2{
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+    .muted{
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.35;
+    }
+    label{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    input[type="text"], input[type="number"], select, textarea{
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      outline: none;
+    }
+    textarea{ min-height: 62px; resize: vertical; }
+    input[type="number"]{ max-width: 220px; }
+
+    .row{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+    .row.wrap{ flex-wrap: wrap; }
+    .between{ justify-content: space-between; }
+
+    table{
+      width:100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    th, td{
+      border-bottom: 1px solid var(--border);
+      padding: 10px 8px;
+      text-align:left;
+      vertical-align: top;
+    }
+    th{ color: var(--muted); font-weight: 800; }
+
+    .errorbox{
+      margin-top: 12px;
+      border: 1px solid rgba(255,107,107,.55);
+      background: rgba(255,107,107,.10);
+      padding: 12px;
+      border-radius: 12px;
+      color: #ffd6d6;
+      font-size: 13px;
+      line-height:1.35;
+      white-space: pre-line;
+    }
+    .hidden{ display:none; }
+
+    .questions{
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .q-entry{
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .q-entry h3{
+      margin:0 0 10px;
+      font-size: 15px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .pill{
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.05);
+      white-space:nowrap;
+    }
+    .q-controls{
+      display:grid;
+      grid-template-columns: 1.4fr 1fr 0.8fr auto auto;
+      gap: 10px;
+      align-items:end;
+    }
+    @media(max-width: 900px){
+      .q-controls{ grid-template-columns: 1fr 1fr; }
+    }
+
+    .preview{
+      margin-top: 12px;
+      border-top: 1px dashed var(--border);
+      padding-top: 12px;
+    }
+    .preview .muted{ margin-bottom: 8px; }
+
+    /* Question rendering */
+    .question-card{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .part{
+      display:grid;
+      grid-template-columns: 1fr 220px;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+      background: rgba(0,0,0,.16);
+    }
+    .part.full{
+      grid-template-columns: 1fr;
+    }
+    .part-text{
+      line-height:1.35;
+      font-size: 14px;
+    }
+    .part-answer{
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+      align-items: stretch;
+      justify-content:center;
+    }
+    .ans{
+      width:100%;
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+    }
+    .ans:disabled{ opacity: .8; }
+    .ans-row{
+      display:flex;
+      gap: 8px;
+    }
+    .ans-row .ans{ flex:1; }
+    .ans-label{
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    .endmark{
+      color: var(--muted);
+      font-weight: 900;
+      margin-left: 6px;
+    }
+
+    /* Table in question text */
+    table.qtable{
+      width: 100%;
+      margin: 10px 0;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    table.qtable th, table.qtable td{
+      border: 1px solid var(--border);
+      padding: 8px 8px;
+    }
+    table.qtable th{
+      background: rgba(255,255,255,.06);
+    }
+    table.qtable td.num, table.qtable th.num{
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .results-summary{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media(max-width: 900px){
+      .results-summary{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    .metric{
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      background: rgba(0,0,0,.15);
+      padding: 10px;
+    }
+    .metric .k{ color: var(--muted); font-weight: 900; font-size: 12px; }
+    .metric .v{ font-weight: 900; font-size: 18px; margin-top: 4px; }
+
+    footer{
+      max-width:1200px;
+      margin: 0 auto;
+      padding: 18px 16px 30px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    code{
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      padding: 2px 6px;
+      border-radius: 8px;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <h1>Prototype Quiz Maker</h1>
+        <div id="bankStatus" class="status">Loading question bank…</div>
+      </div>
+      <div class="tabs">
+        <button id="tabBuilder" class="tab active" type="button">Teacher dashboard</button>
+        <button id="tabStudent" class="tab" type="button" disabled>Student quiz</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="builderView" class="view active">
+      <div class="grid">
+        <div class="panel">
+          <h2>Quiz setup</h2>
+          <div class="row wrap">
+            <label style="min-width:320px;flex:1">
+              Quiz title
+              <input id="quizTitle" type="text" placeholder="e.g. Diagnostic – Number Skills (N7–N9)" />
+            </label>
+          </div>
+          <p class="muted" style="margin-top:10px">
+            This is a prototype. Nothing is saved to a server. When you refresh, the quiz resets.
+          </p>
+        </div>
+
+        <div class="panel">
+          <h2>Grade boundaries</h2>
+          <p class="muted">Enter percentage ranges. The first matching range will be used to assign a grade.</p>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:120px">Min %</th>
+                <th style="width:120px">Max %</th>
+                <th>Grade</th>
+                <th style="width:110px"></th>
+              </tr>
+            </thead>
+            <tbody id="boundariesBody"></tbody>
+          </table>
+          <div class="row wrap" style="margin-top:10px">
+            <button id="addBoundary" type="button">Add boundary</button>
+            <button id="resetBoundaries" class="secondary" type="button">Reset defaults</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Create quiz</h2>
+          <div class="row wrap">
+            <label>
+              Number of questions
+              <input id="questionCount" type="number" min="1" max="50" value="5" />
+            </label>
+            <button id="applyCount" type="button">Apply</button>
+            <button id="addQuestion" class="primary" type="button">Add question</button>
+          </div>
+
+          <div id="questionsList" class="questions"></div>
+
+          <div class="row between" style="margin-top:12px">
+            <div class="muted" id="totalMarksDisplay">Total marks: 0</div>
+            <button id="generateQuiz" class="primary" type="button">Generate quiz</button>
+          </div>
+
+          <div id="builderErrors" class="errorbox hidden"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="studentView" class="view">
+      <div class="grid">
+        <div class="panel">
+          <h2 id="studentQuizTitle">Quiz</h2>
+          <div class="row between wrap">
+            <div class="muted" id="progressDisplay">Question 1 of 1</div>
+            <div class="muted" id="studentMarksDisplay"></div>
+          </div>
+        </div>
+
+        <div id="studentQuestionHost" class="panel"></div>
+
+        <div class="panel">
+          <div class="row between wrap">
+            <button id="prevQ" class="secondary" type="button">Previous</button>
+            <div class="row wrap">
+              <button id="nextQ" class="secondary" type="button">Next</button>
+              <button id="submitQuiz" class="primary" type="button">Submit quiz</button>
+            </div>
+          </div>
+          <div class="row between wrap" style="margin-top:10px">
+            <button id="backToBuilder" class="link" type="button">← Back to dashboard</button>
+            <button id="restartAttempt" class="secondary" type="button">Restart attempt</button>
+          </div>
+          <div id="studentErrors" class="errorbox hidden"></div>
+        </div>
+
+        <div id="resultsPanel" class="panel hidden">
+          <h2>Results</h2>
+          <div id="resultsSummary" class="results-summary"></div>
+          <details style="margin-top:10px">
+            <summary style="cursor:pointer;font-weight:900;color:var(--text)">View breakdown</summary>
+            <div id="breakdownContent" style="margin-top:10px"></div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div>GitHub Pages tip: your site must be opened on the <code>https://&lt;user&gt;.github.io/&lt;repo&gt;/</code> URL, not the file preview on <code>github.com</code>.</div>
+  </footer>
+
+  <script>
+  (function(){
+    "use strict";
+
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+    const els = {
+      bankStatus: $("#bankStatus"),
+      tabBuilder: $("#tabBuilder"),
+      tabStudent: $("#tabStudent"),
+      builderView: $("#builderView"),
+      studentView: $("#studentView"),
+
+      quizTitle: $("#quizTitle"),
+      boundariesBody: $("#boundariesBody"),
+      addBoundary: $("#addBoundary"),
+      resetBoundaries: $("#resetBoundaries"),
+
+      questionCount: $("#questionCount"),
+      applyCount: $("#applyCount"),
+      addQuestion: $("#addQuestion"),
+      questionsList: $("#questionsList"),
+      totalMarksDisplay: $("#totalMarksDisplay"),
+      generateQuiz: $("#generateQuiz"),
+      builderErrors: $("#builderErrors"),
+
+      studentQuizTitle: $("#studentQuizTitle"),
+      progressDisplay: $("#progressDisplay"),
+      studentMarksDisplay: $("#studentMarksDisplay"),
+      studentQuestionHost: $("#studentQuestionHost"),
+      prevQ: $("#prevQ"),
+      nextQ: $("#nextQ"),
+      submitQuiz: $("#submitQuiz"),
+      backToBuilder: $("#backToBuilder"),
+      restartAttempt: $("#restartAttempt"),
+      studentErrors: $("#studentErrors"),
+
+      resultsPanel: $("#resultsPanel"),
+      resultsSummary: $("#resultsSummary"),
+      breakdownContent: $("#breakdownContent"),
+    };
+
+    const state = {
+      bank: null,
+      builder: {
+        boundaries: [],
+        questions: [], // entries
+      },
+      quiz: null,
+      student: {
+        currentIndex: 0,
+        answers: {},  // { [qIndex]: { [partId]: {raw, num} | [ {raw,num}, {raw,num} ] } }
+      }
+    };
+
+    function defaultBoundaries(){
+      return [
+        {min:0,  max:20, grade:"D"},
+        {min:21, max:40, grade:"C"},
+        {min:41, max:60, grade:"B"},
+        {min:61, max:80, grade:"A"},
+        {min:81, max:100, grade:"A*"},
+      ];
+    }
+
+    function showError(boxEl, msg){
+      boxEl.textContent = msg;
+      boxEl.classList.remove("hidden");
+    }
+    function clearError(boxEl){
+      boxEl.textContent = "";
+      boxEl.classList.add("hidden");
+    }
+
+    function switchView(which){
+      if(which==="builder"){
+        els.builderView.classList.add("active");
+        els.studentView.classList.remove("active");
+        els.tabBuilder.classList.add("active");
+        els.tabStudent.classList.remove("active");
+      }else{
+        els.builderView.classList.remove("active");
+        els.studentView.classList.add("active");
+        els.tabBuilder.classList.remove("active");
+        els.tabStudent.classList.add("active");
+      }
+    }
+
+    function safeInt(v, fallback){
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.trunc(n) : fallback;
+    }
+
+    function renderBoundaries(){
+      const rows = state.builder.boundaries;
+      els.boundariesBody.innerHTML = rows.map((r, idx)=>`
+        <tr data-bidx="${idx}">
+          <td><input type="number" min="0" max="100" value="${r.min}" data-field="min" /></td>
+          <td><input type="number" min="0" max="100" value="${r.max}" data-field="max" /></td>
+          <td><input type="text" value="${escapeHtmlAttr(String(r.grade ?? ""))}" data-field="grade" placeholder="e.g. 7 or B" /></td>
+          <td><button type="button" class="danger" data-action="removeBoundary">Remove</button></td>
+        </tr>
+      `).join("");
+    }
+
+    function escapeHtmlAttr(s){
+      return String(s)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+    }
+
+    function readBoundariesFromUI(){
+      const out = [];
+      const trs = $$("tr[data-bidx]", els.boundariesBody);
+      for(const tr of trs){
+        const min = safeInt($('input[data-field="min"]', tr).value, 0);
+        const max = safeInt($('input[data-field="max"]', tr).value, 0);
+        const grade = $('input[data-field="grade"]', tr).value.trim();
+        out.push({min, max, grade});
+      }
+      return out;
+    }
+
+    function validateBoundaries(bounds){
+      const errs = [];
+      if(!bounds.length) errs.push("Add at least one grade boundary.");
+      for(const [i,b] of bounds.entries()){
+        if(!Number.isFinite(b.min) || !Number.isFinite(b.max)) errs.push(`Boundary ${i+1}: min/max must be numbers.`);
+        if(b.min<0 || b.max<0 || b.min>100 || b.max>100) errs.push(`Boundary ${i+1}: min/max must be between 0 and 100.`);
+        if(b.min>b.max) errs.push(`Boundary ${i+1}: min cannot be greater than max.`);
+        if(!String(b.grade||"").trim()) errs.push(`Boundary ${i+1}: grade label is blank.`);
+      }
+      return errs;
+    }
+
+    function randSeed(){
+      // deterministic enough for prototype; uses crypto if available
+      try{
+        if(window.crypto && crypto.getRandomValues){
+          const a = new Uint32Array(1);
+          crypto.getRandomValues(a);
+          return a[0] >>> 0;
+        }
+      }catch(e){}
+      return (Math.random()*2**32)>>>0;
+    }
+
+    function makeEntry(){
+      const topics = (state.bank?.topics || []);
+      const firstTopic = topics[0]?.code || "N7";
+      return {
+        id: "q_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16),
+        topicCode: firstTopic,
+        paperMode: "noncalc",
+        marksTotal: 1,
+        seed: null,
+        instance: null,
+      };
+    }
+
+    function topicOptionsHtml(selected){
+      const topics = state.bank?.topics || [];
+      return topics.map(t => `<option value="${t.code}" ${t.code===selected ? "selected" : ""}>${t.code} — ${escapeHtmlAttr(t.name)}</option>`).join("");
+    }
+
+    function renderBuilderQuestions(){
+      const qs = state.builder.questions;
+      els.questionsList.innerHTML = qs.map((q, idx)=>{
+        const pill = `${q.topicCode} • ${q.paperMode==="calc" ? "Calculator" : "Non‑calculator"} • ${q.marksTotal} mark${q.marksTotal===1?"":"s"}`;
+        const previewHtml = q.instance
+          ? renderQuestionInstance(q.instance, {readonly:true, qIndex: idx})
+          : `<div class="muted">No preview yet. Click <b>Preview</b> to generate a version.</div>`;
+        return `
+          <div class="q-entry" data-qid="${q.id}">
+            <h3>
+              <span>Question ${idx+1}</span>
+              <span class="pill">${pill}</span>
+            </h3>
+            <div class="q-controls">
+              <label>Question bank
+                <select data-field="topic">
+                  ${topicOptionsHtml(q.topicCode)}
+                </select>
+              </label>
+              <label>Calculator?
+                <select data-field="paper">
+                  <option value="noncalc" ${q.paperMode==="noncalc"?"selected":""}>Non‑calculator</option>
+                  <option value="calc" ${q.paperMode==="calc"?"selected":""}>Calculator</option>
+                </select>
+              </label>
+              <label>Marks
+                <select data-field="marks">
+                  ${[1,2,3,4,5].map(m=>`<option value="${m}" ${q.marksTotal===m?"selected":""}>${m}</option>`).join("")}
+                </select>
+              </label>
+              <button type="button" data-action="preview">Preview</button>
+              <button type="button" class="danger" data-action="remove">Remove</button>
+            </div>
+            <div class="preview">
+              <div class="muted">Preview (locked seed: ${q.seed ?? "—"})</div>
+              ${previewHtml}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      updateTotalMarksDisplay();
+    }
+
+    function updateTotalMarksDisplay(){
+      const total = state.builder.questions.reduce((s,q)=>s + Number(q.marksTotal||0), 0);
+      els.totalMarksDisplay.textContent = `Total marks: ${total}`;
+    }
+
+    function findEntryById(qid){
+      return state.builder.questions.find(q => q.id === qid) || null;
+    }
+
+    function invalidateEntry(entry){
+      entry.instance = null;
+      entry.seed = null;
+    }
+
+    function generateInstanceForEntry(entry){
+      const seed = randSeed();
+      entry.seed = seed;
+      entry.instance = state.bank.generate(entry.topicCode, entry.marksTotal, entry.paperMode, seed);
+    }
+
+    function renderQuestionInstance(question, opts){
+      const readonly = !!opts.readonly;
+      const qIndex = Number(opts.qIndex ?? 0);
+      const parts = question.parts || [];
+      const htmlParts = parts.map((p)=>{
+        if(!p) return "";
+        const hasInput = !!p.input;
+        const kind = hasInput ? p.input.kind : null;
+
+        const partText = `<div class="part-text">${p.textHtml || ""}</div>`;
+        if(!hasInput){
+          return `<div class="part full">${partText}</div>`;
+        }
+
+        const inputHtml = renderInputForPart(p, {readonly, qIndex});
+        return `<div class="part">${partText}<div class="part-answer">${inputHtml}</div></div>`;
+      }).join("");
+
+      return `<div class="question-card">${htmlParts}</div>`;
+    }
+
+    function renderInputForPart(part, opts){
+      const readonly = !!opts.readonly;
+      const qIndex = Number(opts.qIndex ?? 0);
+      const kind = part.input?.kind || "number";
+      const pid = part.input?.id || ("p_" + Math.random().toString(16).slice(2));
+      const dis = readonly ? "disabled" : "";
+      const baseAttrs = `class="ans" ${dis} data-qindex="${qIndex}" data-partid="${pid}" data-kind="${kind}"`;
+
+      if(kind === "pair"){
+        const ph = part.input.placeholders || ["answer 1", "answer 2"];
+        return `
+          <div class="ans-row">
+            <input type="text" ${baseAttrs} data-sub="0" placeholder="${escapeHtmlAttr(ph[0]||"answer 1")}" />
+            <input type="text" ${baseAttrs} data-sub="1" placeholder="${escapeHtmlAttr(ph[1]||"answer 2")}" />
+          </div>
+        `;
+      }
+
+      if(kind === "money"){
+        return `<input type="text" ${baseAttrs} placeholder="£" />`;
+      }
+
+      if(kind === "integer"){
+        return `<input type="text" ${baseAttrs} placeholder="integer" />`;
+      }
+
+      return `<input type="text" ${baseAttrs} placeholder="answer" />`;
+    }
+
+    function setQuestionCount(n){
+      const target = Math.max(1, Math.min(50, safeInt(n, 1)));
+      const cur = state.builder.questions.length;
+      if(target > cur){
+        for(let i=cur; i<target; i++) state.builder.questions.push(makeEntry());
+      }else if(target < cur){
+        const ok = window.confirm(`Reduce from ${cur} to ${target} questions? This will remove the last ${cur-target} question(s).`);
+        if(!ok) return;
+        state.builder.questions = state.builder.questions.slice(0, target);
+      }
+      renderBuilderQuestions();
+      els.questionCount.value = String(target);
+    }
+
+    function ensureQuizReady(){
+      // Validate boundaries
+      const bounds = readBoundariesFromUI();
+      const bErrs = validateBoundaries(bounds);
+      if(bErrs.length){
+        return {ok:false, msg: bErrs.join("\n")};
+      }
+      state.builder.boundaries = bounds;
+
+      if(!state.builder.questions.length){
+        return {ok:false, msg: "Add at least one question."};
+      }
+
+      // Ensure instances exist
+      for(const entry of state.builder.questions){
+        if(!entry.topicCode) return {ok:false, msg: "A question is missing a topic selection."};
+        if(!entry.paperMode) return {ok:false, msg: "A question is missing calculator/non-calculator selection."};
+        if(!entry.marksTotal) return {ok:false, msg: "A question is missing marks selection."};
+
+        if(!entry.instance){
+          generateInstanceForEntry(entry);
+        }
+      }
+      return {ok:true};
+    }
+
+    function buildQuiz(){
+      const title = els.quizTitle.value.trim() || "Quiz";
+      const quiz = {
+        title,
+        boundaries: state.builder.boundaries.slice().map(b=>({min:b.min, max:b.max, grade:b.grade})),
+        questions: state.builder.questions.map(e => ({
+          id: e.id,
+          topicCode: e.topicCode,
+          topicName: e.instance.topicName || e.topicCode,
+          paperMode: e.paperMode,
+          marksTotal: e.marksTotal,
+          seed: e.seed,
+          instance: e.instance,
+        })),
+      };
+      return quiz;
+    }
+
+    function startStudentAttempt(){
+      state.student.currentIndex = 0;
+      state.student.answers = {};
+      els.resultsPanel.classList.add("hidden");
+      els.resultsSummary.innerHTML = "";
+      els.breakdownContent.innerHTML = "";
+      clearError(els.studentErrors);
+
+      els.studentQuizTitle.textContent = state.quiz.title;
+      els.studentMarksDisplay.textContent = `Total marks: ${totalPossibleMarks(state.quiz)}`;
+            els.studentQuestionHost.innerHTML = "";
+renderStudentQuestion(0);
+    }
+
+    function totalPossibleMarks(quiz){
+      return quiz.questions.reduce((s,q)=>s + (q.instance?.totalMarks ?? q.marksTotal ?? 0), 0);
+    }
+
+    function renderStudentQuestion(index){
+      const quiz = state.quiz;
+      const qCount = quiz.questions.length;
+      const idx = Math.max(0, Math.min(qCount-1, index));
+
+      // Save current answers before switching
+      saveCurrentStudentAnswers();
+
+      state.student.currentIndex = idx;
+
+      const qWrap = quiz.questions[idx];
+      const q = qWrap.instance;
+      els.progressDisplay.textContent = `Question ${idx+1} of ${qCount}`;
+      els.prevQ.disabled = (idx===0);
+      els.nextQ.disabled = (idx===qCount-1);
+
+      els.studentQuestionHost.innerHTML = `
+        <div class="muted" style="margin-bottom:10px">${escapeHtmlAttr(q.topicName || q.topicCode)} • ${q.paperMode==="calc" ? "Calculator" : "Non‑calculator"} • ${q.totalMarks} mark${q.totalMarks===1?"":"s"}</div>
+        ${renderQuestionInstance(q, {readonly:false, qIndex: idx})}
+      `;
+
+      // Restore saved answers (if any)
+      hydrateAnswersForQuestion(idx);
+
+      // If results already shown, keep it
+    }
+
+    function hydrateAnswersForQuestion(qIndex){
+      const saved = state.student.answers[qIndex];
+      if(!saved) return;
+      // For each input in current host, set value
+      const inputs = $$("input.ans", els.studentQuestionHost);
+      for(const inp of inputs){
+        const pid = inp.dataset.partid;
+        const kind = inp.dataset.kind;
+        const sub = inp.dataset.sub;
+        const rec = saved[pid];
+        if(rec == null) continue;
+
+        if(kind==="pair"){
+          if(Array.isArray(rec) && sub != null){
+            const i = Number(sub);
+            inp.value = (rec[i]?.raw ?? "");
+          }
+        }else{
+          if(typeof rec === "object" && rec && "raw" in rec){
+            inp.value = rec.raw;
+          }
+        }
+      }
+    }
+
+    function normaliseRaw(raw){
+      return String(raw ?? "").replace(/−/g, "-").trim();
+    }
+
+    function parseNum(raw){
+      const s0 = normaliseRaw(raw);
+      if(!s0) return NaN;
+      let s = s0.replace(/,/g, "");
+      s = s.replace(/£/g, "");
+      // Allow fractions a/b
+      if(s.includes("/")){
+        const m = s.match(/^(-?\d+(?:\.\d+)?)\s*\/\s*(-?\d+(?:\.\d+)?)$/);
+        if(!m) return NaN;
+        const n = Number(m[1]), d = Number(m[2]);
+        if(!Number.isFinite(n) || !Number.isFinite(d) || d===0) return NaN;
+        return n/d;
+      }
+      const n = Number(s);
+      return Number.isFinite(n) ? n : NaN;
+    }
+
+    function countDp(raw){
+      const s = normaliseRaw(raw);
+      const m = s.match(/\.(\d+)/);
+      return m ? m[1].length : 0;
+    }
+
+    function saveCurrentStudentAnswers(){
+      const idx = state.student.currentIndex;
+      const quiz = state.quiz;
+      if(!quiz) return;
+      const qWrap = quiz.questions[idx];
+      if(!qWrap) return;
+      const q = qWrap.instance;
+      const saved = state.student.answers[idx] || {};
+      for(const part of (q.parts || [])){
+        if(!part || !part.input) continue;
+        const pid = part.input.id;
+        const kind = part.input.kind;
+
+        if(kind==="pair"){
+          const inps = $$(`input.ans[data-partid="${pid}"][data-kind="pair"]`, els.studentQuestionHost);
+          // Ensure we have both (sub=0,1)
+          const rec = [];
+          for(const inp of inps){
+            const sub = Number(inp.dataset.sub || 0);
+            const raw = inp.value;
+            rec[sub] = {raw, num: parseNum(raw)};
+          }
+          saved[pid] = rec;
+        }else{
+          const inp = $(`input.ans[data-partid="${pid}"]:not([data-kind="pair"])`, els.studentQuestionHost);
+          if(!inp) continue;
+          const raw = inp.value;
+          saved[pid] = {raw, num: parseNum(raw)};
+        }
+      }
+      state.student.answers[idx] = saved;
+    }
+
+    function closeEnough(a,b,tol=1e-9){
+      return Math.abs(a-b) <= tol;
+    }
+
+    function markQuiz(){
+      saveCurrentStudentAnswers();
+      clearError(els.studentErrors);
+
+      const quiz = state.quiz;
+      const totalMax = totalPossibleMarks(quiz);
+      let totalEarn = 0;
+
+      const breakdown = [];
+
+      for(let qi=0; qi<quiz.questions.length; qi++){
+        const qWrap = quiz.questions[qi];
+        const q = qWrap.instance;
+        const ans = state.student.answers[qi] || {};
+        let qEarn = 0;
+        let qMax = 0;
+
+        const partRows = [];
+
+        for(const part of (q.parts||[])){
+          if(!part) continue;
+          const marks = Number(part.marks || 0);
+          if(marks<=0 || !part.input || !part.answer) continue;
+
+          qMax += marks;
+
+          const pid = part.input.id;
+          const kind = part.input.kind;
+          const expected = part.answer;
+
+          const user = ans[pid];
+
+          const res = markPart(kind, marks, expected, user);
+          qEarn += res.earned;
+
+          partRows.push({
+            text: part.textHtml || "",
+            earned: res.earned,
+            max: marks,
+            note: res.note,
+          });
+        }
+
+        totalEarn += qEarn;
+        breakdown.push({
+          qi,
+          title: `Question ${qi+1} (${q.topicCode} • ${qWrap.paperMode==="calc" ? "Calculator" : "Non‑calculator"})`,
+          earned: qEarn,
+          max: qMax,
+          parts: partRows,
+        });
+      }
+
+      const percent = totalMax>0 ? (totalEarn/totalMax*100) : 0;
+      const grade = gradeFromPercent(percent, quiz.boundaries);
+
+      renderResults({totalEarn, totalMax, percent, grade, breakdown});
+    }
+
+    function markPart(kind, marks, expected, user){
+      // expected: {type, value, ...}
+      // user: {raw,num} OR array for pair
+      const exType = expected.type;
+
+      if(kind==="pair" || exType==="pair"){
+        if(!Array.isArray(user)) return {earned:0, note:"No answer."};
+        const exVals = expected.value || [];
+        const comps = Math.min(exVals.length, user.length);
+        // Distribute marks across components (e.g. 2 marks -> 1+1)
+        const base = Math.floor(marks / Math.max(1, comps));
+        const rem = marks % Math.max(1, comps);
+        let earned = 0;
+        for(let i=0;i<comps;i++){
+          const compMarks = base + (i<rem ? 1 : 0);
+          const u = user[i];
+          const uNum = u ? u.num : NaN;
+          if(Number.isFinite(uNum) && closeEnough(uNum, Number(exVals[i]), 1e-6)){
+            earned += compMarks;
+          }
+        }
+        return {earned, note: earned===marks ? "Correct." : "Partially correct."};
+      }
+
+      if(!user || typeof user !== "object") return {earned:0, note:"No answer."};
+      const raw = user.raw ?? "";
+      const uNum = user.num;
+
+      if(!String(raw).trim()) return {earned:0, note:"No answer."};
+      if(!Number.isFinite(uNum)) return {earned:0, note:"Not a number."};
+
+      // Integer enforcement
+      if(kind==="integer" && !Number.isInteger(uNum)) return {earned:0, note:"Not an integer."};
+
+      if(exType==="number"){
+        const ok = closeEnough(uNum, Number(expected.value), 1e-6);
+        return {earned: ok ? marks : 0, note: ok ? "Correct." : "Incorrect."};
+      }
+
+      if(exType==="rounded"){
+        const target = Number(expected.value);
+        const dpReq = Number(expected.dp);
+        const uDp = countDp(raw);
+
+        if(closeEnough(uNum, target, 1e-6)){
+          if(uDp <= dpReq) return {earned: marks, note:"Correct."};
+          // correct value but not rounded enough
+          return {earned: Math.max(0, marks-1), note:`Value correct but not rounded to ${dpReq} d.p.`};
+        }
+
+        // near-miss rounding check (within 1 unit in last place)
+        const ulp = 1 / (10**dpReq);
+        if(Math.abs(uNum - target) <= ulp && uDp <= dpReq){
+          return {earned: Math.max(0, marks-1), note:"Close rounding error."};
+        }
+
+        return {earned: 0, note:"Incorrect."};
+      }
+
+      // Fallback: treat as numeric
+      const ok = closeEnough(uNum, Number(expected.value), 1e-6);
+      return {earned: ok ? marks : 0, note: ok ? "Correct." : "Incorrect."};
+    }
+
+    function gradeFromPercent(pct, boundaries){
+      const p = Number(pct);
+      const b = (boundaries || []).slice().sort((a,b)=>a.min-b.min);
+      for(const r of b){
+        if(p >= r.min && p <= r.max) return String(r.grade);
+      }
+      return "";
+    }
+
+    function renderResults(res){
+      els.resultsPanel.classList.remove("hidden");
+
+      const pct1 = Math.round(res.percent*10)/10;
+      const grade = res.grade || "—";
+
+      els.resultsSummary.innerHTML = `
+        <div class="metric"><div class="k">Score</div><div class="v">${res.totalEarn} / ${res.totalMax}</div></div>
+        <div class="metric"><div class="k">Percentage</div><div class="v">${pct1}%</div></div>
+        <div class="metric"><div class="k">Grade</div><div class="v">${escapeHtmlAttr(grade)}</div></div>
+        <div class="metric"><div class="k">Questions</div><div class="v">${state.quiz.questions.length}</div></div>
+      `;
+
+      els.breakdownContent.innerHTML = res.breakdown.map(q=>{
+        const parts = q.parts.map(p=>{
+          const safeNote = escapeHtmlAttr(p.note || "");
+          return `
+            <div style="padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(0,0,0,.12);margin-top:10px">
+              <div class="muted" style="font-weight:900">${p.earned}/${p.max} marks • ${safeNote}</div>
+              <div style="margin-top:6px">${p.text}</div>
+            </div>
+          `;
+        }).join("");
+
+        return `
+          <div style="margin-top:14px">
+            <div style="font-weight:900">${escapeHtmlAttr(q.title)} — ${q.earned}/${q.max}</div>
+            ${parts}
+          </div>
+        `;
+      }).join("");
+    }
+
+    // -------------------- Events --------------------
+    els.tabBuilder.addEventListener("click", ()=>switchView("builder"));
+    els.tabStudent.addEventListener("click", ()=>{
+      if(!els.tabStudent.disabled) switchView("student");
+    });
+
+    els.addBoundary.addEventListener("click", ()=>{
+      state.builder.boundaries.push({min:0, max:0, grade:""});
+      renderBoundaries();
+    });
+
+    els.resetBoundaries.addEventListener("click", ()=>{
+      state.builder.boundaries = defaultBoundaries();
+      renderBoundaries();
+    });
+
+    els.boundariesBody.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-action]");
+      if(!btn) return;
+      if(btn.dataset.action==="removeBoundary"){
+        const tr = btn.closest("tr[data-bidx]");
+        if(!tr) return;
+        const idx = Number(tr.dataset.bidx);
+        state.builder.boundaries.splice(idx, 1);
+        renderBoundaries();
+      }
+    });
+
+    els.applyCount.addEventListener("click", ()=>{
+      setQuestionCount(els.questionCount.value);
+    });
+
+    els.addQuestion.addEventListener("click", ()=>{
+      state.builder.questions.push(makeEntry());
+      els.questionCount.value = String(state.builder.questions.length);
+      renderBuilderQuestions();
+    });
+
+    els.questionsList.addEventListener("change", (e)=>{
+      const entryEl = e.target.closest(".q-entry");
+      if(!entryEl) return;
+      const qid = entryEl.dataset.qid;
+      const entry = findEntryById(qid);
+      if(!entry) return;
+
+      const field = e.target?.dataset?.field;
+      if(field==="topic"){
+        entry.topicCode = e.target.value;
+        invalidateEntry(entry);
+      }else if(field==="paper"){
+        entry.paperMode = e.target.value;
+        invalidateEntry(entry);
+      }else if(field==="marks"){
+        entry.marksTotal = safeInt(e.target.value, 1);
+        invalidateEntry(entry);
+      }
+      renderBuilderQuestions();
+    });
+
+    els.questionsList.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-action]");
+      if(!btn) return;
+      const entryEl = btn.closest(".q-entry");
+      if(!entryEl) return;
+      const qid = entryEl.dataset.qid;
+      const entry = findEntryById(qid);
+      if(!entry) return;
+
+      const action = btn.dataset.action;
+      if(action==="remove"){
+        const idx = state.builder.questions.findIndex(q=>q.id===qid);
+        if(idx>=0){
+          state.builder.questions.splice(idx, 1);
+          els.questionCount.value = String(Math.max(1, state.builder.questions.length || 1));
+          if(!state.builder.questions.length){
+            state.builder.questions.push(makeEntry());
+          }
+          renderBuilderQuestions();
+        }
+      }
+      if(action==="preview"){
+        generateInstanceForEntry(entry);
+        renderBuilderQuestions();
+      }
+    });
+
+    els.generateQuiz.addEventListener("click", ()=>{
+      clearError(els.builderErrors);
+
+      const ready = ensureQuizReady();
+      if(!ready.ok){
+        showError(els.builderErrors, ready.msg);
+        return;
+      }
+
+      state.quiz = buildQuiz();
+      els.tabStudent.disabled = false;
+
+      // Go to student view
+      switchView("student");
+      startStudentAttempt();
+    });
+
+    els.prevQ.addEventListener("click", ()=>{
+      renderStudentQuestion(state.student.currentIndex - 1);
+    });
+    els.nextQ.addEventListener("click", ()=>{
+      renderStudentQuestion(state.student.currentIndex + 1);
+    });
+
+    els.restartAttempt.addEventListener("click", ()=>{
+      if(!state.quiz) return;
+      const ok = window.confirm("Restart the student attempt? Your current answers will be cleared.");
+      if(!ok) return;
+      startStudentAttempt();
+    });
+
+    els.backToBuilder.addEventListener("click", ()=>{
+      switchView("builder");
+    });
+
+    els.submitQuiz.addEventListener("click", ()=>{
+      if(!state.quiz) return;
+      markQuiz();
+      // Scroll results into view
+      els.resultsPanel.scrollIntoView({behavior:"smooth", block:"start"});
+    });
+
+    // -------------------- Init --------------------
+    async function init(){
+      clearError(els.builderErrors);
+
+      // Load question bank via fetch so it works on GitHub Pages and you can later swap to an API.
+      try{
+        const res = await fetch("./questionBank.js", {cache:"no-store"});
+        if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const code = await res.text();
+
+        // Execute the bank code as a script (no modules; GitHub Pages safe).
+        const s = document.createElement("script");
+        s.textContent = code;
+        document.head.appendChild(s);
+
+        if(!window.QuestionBank || !window.QuestionBank.generate){
+          throw new Error("QuestionBank did not load (window.QuestionBank is missing).");
+        }
+
+        state.bank = window.QuestionBank;
+        els.bankStatus.textContent = `Question bank loaded: ${state.bank.topics.length} topic(s) • version ${state.bank.version}`;
+      }catch(err){
+        els.bankStatus.textContent = "Question bank failed to load.";
+        showError(els.builderErrors,
+          "The question bank could not be loaded.\n\n" +
+          "Checklist:\n" +
+          "1) Make sure questionBank.js is in the SAME folder as index.html.\n" +
+          "2) Open the site on the GitHub Pages URL (https://<user>.github.io/<repo>/), not the github.com file view.\n" +
+          "3) If testing locally, use a local server (e.g. python -m http.server) because fetch is blocked on file://.\n\n" +
+          "Error: " + (err && err.message ? err.message : String(err))
+        );
+        return;
+      }
+
+      // Boundaries defaults
+      state.builder.boundaries = defaultBoundaries();
+      renderBoundaries();
+
+      // Start with the chosen question count
+      state.builder.questions = [];
+      setQuestionCount(els.questionCount.value);
+
+      renderBuilderQuestions();
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>
