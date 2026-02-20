@@ -1,0 +1,2460 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Prototype Quiz Maker</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --panel:#f8fafc;
+      --panel2:#ffffff;
+      --ink:#1f2937;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --accent:#2563eb;
+      --danger:#b91c1c;
+      --dangerbg:#fee2e2;
+      --ok:#0a7d45;
+      --okbg:#dcfce7;
+      --shadow: 0 10px 30px rgba(0,0,0,.08);
+      --radius: 14px;
+      --tabh:56px;
+      --inputbg:#ffffff;
+    }
+
+    body.dark{
+      --bg:#000000;
+      --panel:#000000;
+      --panel2:#000000;
+      --ink:#ffffff;
+      --muted:#cbd5e1;
+      --border:#333333;
+      --accent:#2563eb;
+      --danger:#ff6b6b;
+      --dangerbg:#2a0006;
+      --ok:#4cd964;
+      --okbg:#052e1a;
+      --shadow: 0 10px 30px rgba(0,0,0,.45);
+      --inputbg:#000000;
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      padding:0;
+      background:var(--bg);
+      color:var(--ink);
+      font:18px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+    }
+
+    header{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:var(--bg);
+      border-bottom:1px solid var(--border);
+    }
+    .header-inner{
+      max-width: 1200px;
+      margin: 0 auto;
+      height: var(--tabh);
+      padding: .5rem .75rem;
+      display:flex;
+      gap:.75rem;
+      align-items:center;
+      justify-content:space-between;
+      overflow:auto hidden;
+      white-space:nowrap;
+    }
+    .brand{display:flex;flex-direction:column;gap:.1rem}
+    h1{margin:0;font-size:18px;letter-spacing:.2px}
+    .status{font-size:12px;color:var(--muted)}
+    .tabs{display:flex;gap:.5rem;align-items:center;flex:0 0 auto}
+
+    button{
+      appearance:none;
+      border:1px solid var(--border);
+      background:var(--panel2);
+      color:var(--ink);
+      border-radius:999px;
+      padding:.45rem 1rem;
+      cursor:pointer;
+      font-weight:800;
+      transition:.15s;
+      flex:0 0 auto;
+    }
+    button:hover{ border-color:#c7d2fe; }
+    button:active{ transform: translateY(1px); }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
+    .tab.active{
+      background:var(--accent);
+      color:#fff;
+      border-color:var(--accent);
+    }
+    .primary{
+      background:var(--accent);
+      color:#fff;
+      border-color:var(--accent);
+    }
+    .primary:hover{ filter: brightness(1.05); }
+    .secondary{
+      background:var(--panel2);
+    }
+    .danger{
+      background:var(--dangerbg);
+      border-color:color-mix(in srgb, var(--danger) 55%, var(--border));
+      color:color-mix(in srgb, var(--danger) 80%, var(--ink));
+    }
+    body.dark .danger{ color:#fecdd3; border-color:#7f1d1d; }
+    .link{
+      background:transparent;
+      border-color:transparent;
+      color:var(--muted);
+      padding:.45rem .6rem;
+    }
+    .link:hover{ color:var(--ink); text-decoration:underline; }
+
+    main{
+      max-width: 1200px;
+      margin: 1rem auto;
+      padding: 0 1rem 5rem;
+    }
+    .view{ display:none; }
+    .view.active{ display:block; }
+
+    .grid{ display:grid; gap: 1rem; }
+
+    /* Student layout: sidebar on the left (for accessibility controls) */
+    .student-grid{
+      grid-template-columns: 240px 1fr;
+      align-items: start;
+    }
+    .student-grid > .panel{ grid-column: 2; }
+    .student-grid > .a11y-panel{
+      grid-column: 1;
+      position: sticky;
+      top: calc(var(--tabh) + 1rem);
+      height: fit-content;
+      overflow: hidden; /* prevents any button highlight spilling outside the panel */
+    }
+    .a11y-panel button{
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .a11y-panel .seg{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:.5rem;
+    }
+    .a11y-panel .seg button{
+      width:100%;
+      padding:.45rem .5rem;
+      white-space: nowrap;
+    }
+    .a11y-panel button.active{
+      background: var(--accent);
+      color:#fff;
+      border-color: var(--accent);
+    }
+
+    @media(max-width: 980px){
+      .student-grid{ grid-template-columns: 1fr; }
+      .student-grid > .panel,
+      .student-grid > .a11y-panel{ grid-column: 1; position: static; }
+      .a11y-panel .seg{ flex-wrap: wrap; }
+    }
+
+    /* Student overlays (SEN colour overlays) */
+    #studentView::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 999;
+      background: transparent;
+    }
+    body.overlay-blue #studentView::before{ background: rgba(59, 130, 246, .18); opacity: 1; }
+    body.overlay-yellow #studentView::before{ background: rgba(250, 204, 21, .18); opacity: 1; }
+    /* Fullscreen preview: snap quiz-only UI to fullscreen */
+    #studentView:fullscreen,
+    #studentView:-webkit-full-screen{
+      --tabh: 0px;
+      background: var(--bg);
+      overflow: auto;
+    }
+
+    /* In fullscreen, hide the quiz picker / non-quiz controls so only the quiz UI remains */
+    #studentView:fullscreen #studentPickerPanel,
+    #studentView:-webkit-full-screen #studentPickerPanel,
+    #studentView:fullscreen #studentNavPanel,
+    #studentView:-webkit-full-screen #studentNavPanel,
+    #studentView:fullscreen #resultsPanel,
+    #studentView:-webkit-full-screen #resultsPanel{
+      display: none !important;
+    }
+
+    /* Fullscreen layout: seamless single surface (no boxed panels) */
+    #studentView:fullscreen .student-grid,
+    #studentView:-webkit-full-screen .student-grid{
+      gap: 0;
+      padding: 0;
+    }
+    #studentView:fullscreen .panel,
+    #studentView:-webkit-full-screen .panel{
+      border: 0;
+      border-radius: 0;
+      background: var(--bg);
+      box-shadow: none;
+    }
+    #studentView:fullscreen .student-grid > .a11y-panel,
+    #studentView:-webkit-full-screen .student-grid > .a11y-panel{
+      top: 0;
+    }
+    #studentView:fullscreen #a11yPanel,
+    #studentView:-webkit-full-screen #a11yPanel{
+      padding: 1rem;
+    }
+    #studentView:fullscreen #studentQuestionHost,
+    #studentView:-webkit-full-screen #studentQuestionHost{
+      padding: 1rem 1.1rem !important;
+    }
+    #studentView:fullscreen .qtabwrap,
+    #studentView:-webkit-full-screen .qtabwrap{
+      margin: 0 0 1rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel{
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 1rem 1.1rem;
+    }
+    .panel h2{ margin:.15rem 0 .6rem; font-size: 1.05rem; }
+    .muted{ color: var(--muted); font-size: .95rem; }
+    .row{ display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; }
+    .between{ justify-content:space-between; }
+
+    label{
+      display:flex;
+      flex-direction:column;
+      gap:.35rem;
+      font-size: .9rem;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    input[type="text"], input[type="number"], select, textarea{
+      width: 100%;
+      padding: .55rem .6rem;
+      border-radius: .55rem;
+      border: 1px solid var(--border);
+      background: var(--inputbg);
+      color: var(--ink);
+      outline: none;
+    }
+    textarea{ min-height: 70px; resize: vertical; }
+    input[type="number"]{ max-width: 220px; }
+
+    table{
+      width:100%;
+      border-collapse: collapse;
+      margin-top: .6rem;
+      font-size: .95rem;
+    }
+    th, td{
+      border:1px solid var(--border);
+      padding:.65rem .7rem;
+      text-align:left;
+      vertical-align: top;
+    }
+    th{ background: color-mix(in srgb, var(--panel) 75%, #fff); }
+    body.dark th{ background:#000; }
+
+    .errorbox{
+      margin-top: .75rem;
+      border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--border));
+      background: color-mix(in srgb, var(--dangerbg) 70%, var(--panel));
+      padding: .7rem .8rem;
+      border-radius: .6rem;
+      color: color-mix(in srgb, var(--danger) 70%, var(--ink));
+      font-size: .95rem;
+      white-space: pre-line;
+    }
+    body.dark .errorbox{ color:#fecdd3; border-color:#7f1d1d; }
+    .hidden{ display:none; }
+
+    /* Builder question entries */
+    .questions{ display:flex; flex-direction:column; gap: .9rem; margin-top: .7rem; }
+    .q-entry{
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      border-radius: .8rem;
+      padding: .85rem .9rem;
+    }
+    .q-entry h3{
+      margin:0 0 .6rem;
+      font-size: 1rem;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:.75rem;
+    }
+    .pill{
+      font-size: .85rem;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: .15rem .55rem;
+      border-radius: 999px;
+      background: var(--panel);
+      white-space:nowrap;
+      font-weight: 800;
+    }
+    .q-controls{
+      display:grid;
+      grid-template-columns: 1.4fr 1fr 0.8fr auto auto;
+      gap: .7rem;
+      align-items:end;
+    }
+    @media(max-width: 980px){
+      .q-controls{ grid-template-columns: 1fr 1fr; }
+    }
+    .preview{
+      margin-top: .75rem;
+      border-top: 1px dashed var(--border);
+      padding-top: .75rem;
+    }
+
+    /* Student question tabs (Q1/Q2/…/Results) */
+    .qtabwrap{
+      position: sticky;
+      top: var(--tabh);
+      z-index: 40;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      margin: -1rem -1rem 1rem;
+      padding: .4rem .25rem;
+    }
+    .qtabbar{
+      display:flex;
+      gap:.5rem;
+      align-items:center;
+      overflow:auto hidden;
+      white-space:nowrap;
+      padding: .1rem .5rem;
+    }
+    .qtabbar button{
+      padding:.38rem .85rem;
+    }
+    .qtabbar button.active{
+      background:var(--accent);
+      color:#fff;
+      border-color:var(--accent);
+    }
+    .qtabbar button.done{
+      border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+    }
+
+    
+    /* Student mode tags (Calculator / Non-calculator) — purple/green like the bank */
+    .mode-tag{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding: .12rem .6rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      font-weight: 900;
+      font-size: .9rem;
+      letter-spacing: .2px;
+      white-space: nowrap;
+    }
+    .mode-tag.calc{
+      color: #7c3aed;
+      border-color: color-mix(in srgb, #7c3aed 45%, var(--border));
+    }
+    .mode-tag.noncalc{
+      color: #16a34a;
+      border-color: color-mix(in srgb, #16a34a 45%, var(--border));
+    }
+    .qmeta{
+      display:flex;
+      gap:.55rem;
+      align-items:center;
+      flex-wrap: wrap;
+      margin: 0 0 .75rem;
+    }
+    .qmeta .topic{
+      font-weight: 900;
+      color: var(--muted);
+    }
+
+    /* Fullscreen-only actions inside the top tab bar */
+    .qtabbar .fs-only{ display:none; }
+    #studentView:fullscreen .qtabbar .fs-only,
+    #studentView:-webkit-full-screen .qtabbar .fs-only{
+      display:inline-flex;
+    }
+
+    
+    .qtabbar button.primary{
+      background: var(--accent);
+      border-color: var(--accent);
+      color:#fff;
+    }
+    .qtabbar button.primary:hover{ filter: brightness(1.03); }
+    .qtabbar button.primary:disabled{ opacity:.55; cursor:not-allowed; filter:none; }
+
+/* Tab status after marking (✓ / ✕) */
+    .qtabbar button.tab-ok::after{
+      content:"✓";
+      margin-left:.35rem;
+      font-weight: 900;
+      color: var(--ok);
+    }
+    .qtabbar button.tab-bad::after{
+      content:"✕";
+      margin-left:.35rem;
+      font-weight: 900;
+      color: var(--danger);
+    }
+    .qtabbar button.tab-partial::after{
+      content:"•";
+      margin-left:.45rem;
+      font-weight: 900;
+      color: var(--warn);
+    }
+
+    /* Answer marking ticks/crosses next to answer boxes */
+    .answrap{ width:100%; display:flex; align-items:center; gap:.45rem; }
+    .answrap .ans{ flex: 1; }
+    .ans-row .answrap{ flex: 1; }
+    .pm{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 1.35em;
+      height: 1.35em;
+      border-radius: 999px;
+      font-weight: 900;
+      font-size: 1.05rem;
+      line-height: 1;
+      user-select:none;
+    }
+    .pm.hidden{ display:none; }
+    .pm.ok{ color: var(--ok); }
+    .pm.bad{ color: var(--danger); }
+    .pm.partial{ color: var(--warn); }
+
+    .ans.correct{
+      border-color: color-mix(in srgb, var(--ok) 55%, var(--border));
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 16%, transparent);
+    }
+    .ans.incorrect{
+      border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 16%, transparent);
+    }
+    .ans.partial{
+      border-color: color-mix(in srgb, var(--warn) 55%, var(--border));
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 14%, transparent);
+    }
+
+    /* Results heatmap */
+    table.heatmap{
+      width:100%;
+      border-collapse: collapse;
+      margin-top: .7rem;
+      font-size: .95rem;
+    }
+    table.heatmap th, table.heatmap td{
+      border: 1px solid var(--border);
+      padding: .55rem .6rem;
+      vertical-align: middle;
+    }
+    td.mark-cell{
+      text-align:center;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .mark-red{ background: color-mix(in srgb, var(--dangerbg) 75%, var(--panel)); }
+    .mark-orange{ background: color-mix(in srgb, var(--warnbg) 75%, var(--panel)); }
+    .mark-green{ background: color-mix(in srgb, var(--okbg) 75%, var(--panel)); }
+/* Question rendering (bank HTML + answer boxes) */
+    .question-card{ display:flex; flex-direction:column; gap: .75rem; }
+    .part{
+      display:grid;
+      grid-template-columns: 1fr 240px;
+      gap: .75rem;
+      padding: .7rem .75rem;
+      border: 1px solid var(--border);
+      border-radius: .7rem;
+      background: var(--panel2);
+      align-items: end; /* key: keeps answer aligned with last line (tables too) */
+    }
+    .part.full{ grid-template-columns: 1fr; }
+    @media(max-width: 720px){
+      .part{ grid-template-columns: 1fr; }
+    }
+    .part-text{
+      line-height:1.6;
+      font-size: 1rem;
+    }
+    .part-answer{
+      display:flex;
+      flex-direction:column;
+      gap:.5rem;
+      align-items: stretch;
+      justify-content: flex-end; /* key */
+      align-self: end;          /* key */
+    }
+    .ans{
+      width:100%;
+      padding:.55rem .6rem;
+      border-radius:.55rem;
+      border:1px solid var(--border);
+      background: var(--inputbg);
+      color: var(--ink);
+    }
+    .ans:disabled{ opacity:.8; }
+    .ans-row{ display:flex; gap:.5rem; }
+    .ans-row .ans{ flex:1; }
+/* note above the first answer box */
+.unitnote{
+  display:block;
+  margin:0 0 .35rem 0;
+  padding:.22rem .55rem;
+  border:1px solid var(--border);
+  border-radius:.6rem;
+  background: var(--panel2);
+  color: var(--muted);
+  font-size:.95rem;
+  font-weight:800;
+}
+
+
+    .endmark{
+      color: var(--muted);
+      font-weight: 900;
+      margin-left: .35rem;
+      white-space:nowrap;
+    }
+
+    /* Bank table styling */
+    table.qtable{
+      width:100%;
+      margin:.65rem 0;
+      border-collapse: collapse;
+      font-size: .95rem;
+    }
+    table.qtable th, table.qtable td{
+      border:1px solid var(--border);
+      padding:.55rem .6rem;
+      vertical-align: middle;
+    }
+    table.qtable th{
+      background: color-mix(in srgb, var(--panel) 75%, #fff);
+    }
+    body.dark table.qtable th{ background:#000; }
+    table.qtable td.num, table.qtable th.num{
+      text-align:right;
+      white-space:nowrap;
+    }
+
+    /* Results */
+    .results-summary{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: .7rem;
+      margin-top: .6rem;
+    }
+    @media(max-width: 900px){
+      .results-summary{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    .metric{
+      border: 1px solid var(--border);
+      border-radius: .7rem;
+      background: var(--panel2);
+      padding: .7rem .75rem;
+    }
+    .metric .k{ color: var(--muted); font-weight: 900; font-size: .85rem; }
+    .metric .v{ font-weight: 900; font-size: 1.15rem; margin-top: .2rem; }
+
+    footer{
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem 2rem;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+    code{
+      background: color-mix(in srgb, var(--panel2) 70%, #fff);
+      border: 1px solid var(--border);
+      padding: .1rem .35rem;
+      border-radius: .45rem;
+      color: var(--ink);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <h1>Prototype Quiz Maker</h1>
+        <div id="bankStatus" class="status">Loading question bank…</div>
+      </div>
+      <div class="tabs">
+        <button id="tabBuilder" class="tab active" type="button">Dashboard</button>
+        <button id="tabQuizzes" class="tab" type="button">Quizzes</button>
+        <button id="tabStudent" class="tab" type="button" disabled>Student quiz</button>
+        <button id="themeToggle" class="secondary" type="button" aria-label="Toggle light or dark mode">Dark mode</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===================== BUILDER ===================== -->
+    <section id="builderView" class="view active">
+      <div class="grid">
+        <div class="panel">
+          <h2>Quiz setup</h2>
+          <div class="row">
+            <label style="min-width:320px;flex:1">
+              Quiz title
+              <input id="quizTitle" type="text" placeholder="e.g. Diagnostic – Number Skills (N7–N9)" />
+            </label>
+          </div>
+          <p class="muted" style="margin:.6rem 0 0">
+            Prototype note: quizzes are saved in <b>this browser only</b> (localStorage). No server storage.
+          </p>
+        </div>
+
+        <div class="panel">
+          <h2>Grade boundaries</h2>
+          <p class="muted">Enter percentage ranges. The first matching range will be used to assign a grade.</p>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:120px">Min %</th>
+                <th style="width:120px">Max %</th>
+                <th>Grade</th>
+                <th style="width:120px"></th>
+              </tr>
+            </thead>
+            <tbody id="boundariesBody"></tbody>
+          </table>
+          <div class="row" style="margin-top:.75rem">
+            <button id="addBoundary" type="button">Add boundary</button>
+            <button id="resetBoundaries" class="secondary" type="button">Reset defaults</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Create quiz</h2>
+          <div class="row">
+            <label>
+              Number of questions
+              <input id="questionCount" type="number" min="1" max="50" value="5" />
+            </label>
+            <button id="applyCount" type="button">Apply</button>
+            <button id="addQuestion" class="primary" type="button">Add question</button>
+          </div>
+
+          <div id="questionsList" class="questions"></div>
+
+          <div class="row between" style="margin-top:.8rem">
+            <div class="muted" id="totalMarksDisplay">Total marks: 0</div>
+            <button id="generateQuiz" class="primary" type="button">Generate quiz</button>
+          </div>
+
+          <div id="builderErrors" class="errorbox hidden"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SAVED QUIZZES ===================== -->
+    <section id="quizzesView" class="view">
+      <div class="grid">
+        <div class="panel">
+          <div class="row between">
+            <h2 style="margin:0">Saved quizzes</h2>
+            <div class="row">
+              <button id="refreshSaved" class="secondary" type="button">Refresh</button>
+              <button id="clearSaved" class="danger" type="button">Clear all</button>
+            </div>
+          </div>
+          <p class="muted" style="margin:.6rem 0 0">
+            These quizzes are saved locally in your browser. If you clear site data, they will be removed.
+          </p>
+          <div id="savedHost" style="margin-top:.8rem"></div>
+          <div id="savedErrors" class="errorbox hidden"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== STUDENT ===================== -->
+    <section id="studentView" class="view">
+      <div class="grid student-grid">
+        <div id="a11yPanel" class="panel a11y-panel">
+          <h2 style="margin:.15rem 0 .4rem">Student view</h2>
+          <div class="muted" style="margin:0 0 .6rem">Display &amp; accessibility</div>
+          <button id="studentThemeToggle" class="secondary" type="button">Dark mode</button>
+          <div class="muted" style="margin-top:.7rem;font-weight:900">Overlay</div>
+          <div class="seg" role="group" aria-label="Overlay options">
+            <button type="button" class="secondary" data-overlay="none">None</button>
+            <button type="button" class="secondary" data-overlay="blue">Blue</button>
+            <button type="button" class="secondary" data-overlay="yellow">Yellow</button>
+          </div>
+          <p class="muted" style="margin:.7rem 0 0;font-size:.9rem">Tip: these options only affect the student quiz view.</p>
+        </div>
+        <div id="studentPickerPanel" class="panel">
+          <h2 id="studentQuizTitle" style="margin:.15rem 0 .35rem">Quiz</h2>
+          <div class="row between">
+            <div class="muted" id="progressDisplay">Question 1 of 1</div>
+            <div class="muted" id="studentMarksDisplay"></div>
+          </div>
+          <div class="row" style="margin-top:.75rem;align-items:end">
+            <label style="min-width:320px;flex:1">
+              Select quiz to preview
+              <select id="studentQuizSelect"></select>
+            </label>
+            <button id="loadStudentQuiz" class="secondary" type="button">Load</button>
+          </div>
+          <div id="studentQuizHint" class="muted" style="margin-top:.35rem"></div>
+          <div class="row" style="justify-content:flex-end;margin-top:.75rem">
+            <button id="previewFullscreen" class="primary" type="button" disabled>Preview quiz</button>
+          </div>
+        </div>
+
+        <div class="panel" style="padding:0">
+          <div id="studentQTabsWrap" class="qtabwrap hidden">
+            <div id="studentQTabs" class="qtabbar" role="tablist" aria-label="Question navigation"></div>
+          </div>
+          <div id="studentQuestionHost" style="padding:1rem 1.1rem"></div>
+        </div>
+
+        <div id="studentNavPanel" class="panel">
+          <div class="row between">
+            <button id="prevQ" class="secondary" type="button">Previous</button>
+            <div class="row">
+              <button id="nextQ" class="secondary" type="button">Next</button>
+              <button id="submitQuiz" class="primary" type="button">Submit quiz</button>
+            </div>
+          </div>
+          <div class="row between" style="margin-top:.7rem">
+            <button id="backToBuilder" class="link" type="button">← Back to dashboard</button>
+            <button id="restartAttempt" class="secondary" type="button">New random attempt</button>
+          </div>
+          <div id="studentErrors" class="errorbox hidden"></div>
+        </div>
+
+        <div id="resultsPanel" class="panel hidden">
+          <h2>Results</h2>
+          <div id="resultsSummary" class="results-summary"></div>
+          <details style="margin-top:.8rem">
+            <summary style="cursor:pointer;font-weight:900;color:var(--ink)">View breakdown</summary>
+            <div id="breakdownContent" style="margin-top:.8rem"></div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div>GitHub Pages tip: open the site using the <code>https://&lt;user&gt;.github.io/&lt;repo&gt;/</code> URL, not the file preview on <code>github.com</code>.</div>
+  </footer>
+
+  <script>
+  (function(){
+    "use strict";
+
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+    const LS_KEYS = {
+      THEME: "quizmaker_theme",
+      OVERLAY: "quizmaker_studentOverlay",
+      SAVED: "quizmaker_savedQuizzes_v1",
+    };
+
+    const els = {
+      bankStatus: $("#bankStatus"),
+      tabBuilder: $("#tabBuilder"),
+      tabQuizzes: $("#tabQuizzes"),
+      tabStudent: $("#tabStudent"),
+      themeToggle: $("#themeToggle"),
+
+      a11yPanel: $("#a11yPanel"),
+      studentThemeToggle: $("#studentThemeToggle"),
+      studentQuizSelect: $("#studentQuizSelect"),
+      loadStudentQuiz: $("#loadStudentQuiz"),
+      studentQuizHint: $("#studentQuizHint"),
+      previewFullscreen: $("#previewFullscreen"),
+
+      builderView: $("#builderView"),
+      quizzesView: $("#quizzesView"),
+      studentView: $("#studentView"),
+
+      quizTitle: $("#quizTitle"),
+      boundariesBody: $("#boundariesBody"),
+      addBoundary: $("#addBoundary"),
+      resetBoundaries: $("#resetBoundaries"),
+
+      questionCount: $("#questionCount"),
+      applyCount: $("#applyCount"),
+      addQuestion: $("#addQuestion"),
+      questionsList: $("#questionsList"),
+      totalMarksDisplay: $("#totalMarksDisplay"),
+      generateQuiz: $("#generateQuiz"),
+      builderErrors: $("#builderErrors"),
+
+      refreshSaved: $("#refreshSaved"),
+      clearSaved: $("#clearSaved"),
+      savedHost: $("#savedHost"),
+      savedErrors: $("#savedErrors"),
+
+      studentQuizTitle: $("#studentQuizTitle"),
+      progressDisplay: $("#progressDisplay"),
+      studentMarksDisplay: $("#studentMarksDisplay"),
+      studentQTabsWrap: $("#studentQTabsWrap"),
+      studentQTabs: $("#studentQTabs"),
+      studentQuestionHost: $("#studentQuestionHost"),
+      prevQ: $("#prevQ"),
+      nextQ: $("#nextQ"),
+      submitQuiz: $("#submitQuiz"),
+      backToBuilder: $("#backToBuilder"),
+      restartAttempt: $("#restartAttempt"),
+      studentErrors: $("#studentErrors"),
+
+      resultsPanel: $("#resultsPanel"),
+      resultsSummary: $("#resultsSummary"),
+      breakdownContent: $("#breakdownContent"),
+    };
+
+    const state = {
+      bank: null,
+
+      builder: {
+        boundaries: [],
+        questions: [], // entries
+      },
+
+      savedQuizzes: [], // loaded from LS
+
+      quizBlueprint: null, // what teacher configured (no locked numbers)
+      quizAttempt: null,   // generated instances for this attempt
+
+      student: {
+        currentIndex: 0,
+        activeTab: 0,  // number | "results"
+        answers: {},   // { [qIndex]: { [partId]: {raw, num} | [ {raw,num}, {raw,num} ] } }
+        submitted: false,
+        marked: false,
+        result: null,
+      }
+    };
+
+    /* -------------------- Theme -------------------- */
+    function applyTheme(theme){
+      const t = (theme === "dark") ? "dark" : "light";
+      document.body.classList.toggle("dark", t === "dark");
+      const label = (t === "dark") ? "Light mode" : "Dark mode";
+      els.themeToggle.textContent = label;
+      if(els.studentThemeToggle) els.studentThemeToggle.textContent = label;
+      try{ localStorage.setItem(LS_KEYS.THEME, t); }catch(e){}
+    }
+    function initTheme(){
+      let t = null;
+      try{ t = localStorage.getItem(LS_KEYS.THEME); }catch(e){}
+      if(t === "dark" || t === "light"){
+        applyTheme(t);
+        return;
+      }
+      // Default to system preference
+      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      applyTheme(prefersDark ? "dark" : "light");
+    }
+
+    /* -------------------- Student overlays (SEN) -------------------- */
+    function applyOverlay(mode){
+      const m = (mode === "blue" || mode === "yellow") ? mode : "none";
+      document.body.classList.toggle("overlay-blue", m === "blue");
+      document.body.classList.toggle("overlay-yellow", m === "yellow");
+
+      // Update the left-side buttons
+      if(els.a11yPanel){
+        const btns = $$('button[data-overlay]', els.a11yPanel);
+        for(const b of btns){
+          const on = (b.dataset.overlay === m);
+          b.classList.toggle("active", on);
+          b.setAttribute("aria-pressed", on ? "true" : "false");
+        }
+      }
+
+      try{ localStorage.setItem(LS_KEYS.OVERLAY, m); }catch(e){}
+    }
+
+    function initOverlay(){
+      let m = null;
+      try{ m = localStorage.getItem(LS_KEYS.OVERLAY); }catch(e){}
+      applyOverlay(m || "none");
+    }
+
+
+    /* -------------------- Fullscreen (student preview) -------------------- */
+    function getFullscreenElement(){
+      return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+    }
+
+    async function requestFullscreen(el){
+      if(!el) throw new Error("Nothing to preview.");
+      const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+      if(!fn) throw new Error("Fullscreen API is not supported in this browser.");
+      const ret = fn.call(el);
+      if(ret && typeof ret.then === "function") await ret;
+    }
+
+    async function exitFullscreen(){
+      const fn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+      if(!fn) return;
+      const ret = fn.call(document);
+      if(ret && typeof ret.then === "function") await ret;
+    }
+
+    function syncFullscreenButton(){
+      if(!els.previewFullscreen) return;
+      const inFs = !!getFullscreenElement();
+      els.previewFullscreen.textContent = inFs ? "Exit fullscreen" : "Preview quiz";
+    }
+
+    /* -------------------- Utilities -------------------- */
+    function defaultBoundaries(){
+      return [
+        {min:0,  max:20, grade:"D"},
+        {min:21, max:40, grade:"C"},
+        {min:41, max:60, grade:"B"},
+        {min:61, max:80, grade:"A"},
+        {min:81, max:100, grade:"A*"},
+      ];
+    }
+
+    function showError(boxEl, msg){
+      boxEl.textContent = msg;
+      boxEl.classList.remove("hidden");
+    }
+    function clearError(boxEl){
+      boxEl.textContent = "";
+      boxEl.classList.add("hidden");
+    }
+
+    function switchView(which){
+      const all = ["builder","quizzes","student"];
+      for(const w of all){
+        const on = (w===which);
+        els[`${w}View`].classList.toggle("active", on);
+      }
+      els.tabBuilder.classList.toggle("active", which==="builder");
+      els.tabQuizzes.classList.toggle("active", which==="quizzes");
+      els.tabStudent.classList.toggle("active", which==="student");
+    }
+
+    function updateStudentTabEnabled(){
+      const can = (state.savedQuizzes && state.savedQuizzes.length > 0) || Boolean(state.quizBlueprint);
+      els.tabStudent.disabled = !can;
+    }
+
+    function safeInt(v, fallback){
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.trunc(n) : fallback;
+    }
+
+    function escapeHtmlAttr(s){
+      return String(s)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+    }
+
+    function randSeed(){
+      try{
+        if(window.crypto && crypto.getRandomValues){
+          const a = new Uint32Array(1);
+          crypto.getRandomValues(a);
+          return a[0] >>> 0;
+        }
+      }catch(e){}
+      return (Math.random()*2**32)>>>0;
+    }
+
+    /* -------------------- Boundaries UI -------------------- */
+    function renderBoundaries(){
+      const rows = state.builder.boundaries;
+      els.boundariesBody.innerHTML = rows.map((r, idx)=>`
+        <tr data-bidx="${idx}">
+          <td><input type="number" min="0" max="100" value="${r.min}" data-field="min" /></td>
+          <td><input type="number" min="0" max="100" value="${r.max}" data-field="max" /></td>
+          <td><input type="text" value="${escapeHtmlAttr(String(r.grade ?? ""))}" data-field="grade" placeholder="e.g. 7 or B" /></td>
+          <td><button type="button" class="danger" data-action="removeBoundary">Remove</button></td>
+        </tr>
+      `).join("");
+    }
+
+    function readBoundariesFromUI(){
+      const out = [];
+      const trs = $$("tr[data-bidx]", els.boundariesBody);
+      for(const tr of trs){
+        const min = safeInt($('input[data-field="min"]', tr).value, 0);
+        const max = safeInt($('input[data-field="max"]', tr).value, 0);
+        const grade = $('input[data-field="grade"]', tr).value.trim();
+        out.push({min, max, grade});
+      }
+      return out;
+    }
+
+    function validateBoundaries(bounds){
+      const errs = [];
+      if(!bounds.length) errs.push("Add at least one grade boundary.");
+      for(const [i,b] of bounds.entries()){
+        if(!Number.isFinite(b.min) || !Number.isFinite(b.max)) errs.push(`Boundary ${i+1}: min/max must be numbers.`);
+        if(b.min<0 || b.max<0 || b.min>100 || b.max>100) errs.push(`Boundary ${i+1}: min/max must be between 0 and 100.`);
+        if(b.min>b.max) errs.push(`Boundary ${i+1}: min cannot be greater than max.`);
+        if(!String(b.grade||"").trim()) errs.push(`Boundary ${i+1}: grade label is blank.`);
+      }
+      return errs;
+    }
+
+    /* -------------------- Builder questions -------------------- */
+    function makeEntry(){
+      const topics = (state.bank?.topics || []);
+      const firstTopic = topics[0]?.code || "N7";
+      return {
+        id: "q_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16),
+        topicCode: firstTopic,
+        paperMode: "noncalc",
+        marksTotal: 1,
+        previewSeed: null,
+        previewInstance: null,
+      };
+    }
+
+    function topicOptionsHtml(selected){
+      const topics = state.bank?.topics || [];
+      return topics.map(t => `<option value="${t.code}" ${t.code===selected ? "selected" : ""}>${t.code} — ${escapeHtmlAttr(t.name)}</option>`).join("");
+    }
+
+    function renderBuilderQuestions(){
+      const qs = state.builder.questions;
+      els.questionsList.innerHTML = qs.map((q, idx)=>{
+        const pill = `${q.topicCode} • ${q.paperMode==="calc" ? "Calculator" : "Non-calculator"} • ${q.marksTotal} mark${q.marksTotal===1?"":"s"}`;
+        const previewHtml = q.previewInstance
+          ? renderQuestionInstance(q.previewInstance, {readonly:true, qIndex: idx})
+          : `<div class="muted">No preview yet. Click <b>Preview</b> to generate a version.</div>`;
+        return `
+          <div class="q-entry" data-qid="${q.id}">
+            <h3>
+              <span>Question ${idx+1}</span>
+              <span class="pill">${pill}</span>
+            </h3>
+            <div class="q-controls">
+              <label>Question bank
+                <select data-field="topic">
+                  ${topicOptionsHtml(q.topicCode)}
+                </select>
+              </label>
+              <label>Calculator?
+                <select data-field="paper">
+                  <option value="noncalc" ${q.paperMode==="noncalc"?"selected":""}>Non-calculator</option>
+                  <option value="calc" ${q.paperMode==="calc"?"selected":""}>Calculator</option>
+                </select>
+              </label>
+              <label>Marks
+                <select data-field="marks">
+                  ${[1,2,3,4,5].map(m=>`<option value="${m}" ${q.marksTotal===m?"selected":""}>${m}</option>`).join("")}
+                </select>
+              </label>
+              <button type="button" data-action="preview">Preview</button>
+              <button type="button" class="danger" data-action="remove">Remove</button>
+            </div>
+            <div class="preview">
+              <div class="muted">Preview seed: ${q.previewSeed ?? "—"} (preview does <b>not</b> lock the quiz)</div>
+              ${previewHtml}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      updateTotalMarksDisplay();
+    }
+
+    function updateTotalMarksDisplay(){
+      const total = state.builder.questions.reduce((s,q)=>s + Number(q.marksTotal||0), 0);
+      els.totalMarksDisplay.textContent = `Total marks: ${total}`;
+    }
+
+    function findEntryById(qid){
+      return state.builder.questions.find(q => q.id === qid) || null;
+    }
+
+    function invalidateEntry(entry){
+      entry.previewInstance = null;
+      entry.previewSeed = null;
+    }
+
+    function generatePreviewForEntry(entry){
+      const seed = randSeed();
+      entry.previewSeed = seed;
+      entry.previewInstance = state.bank.generate(entry.topicCode, entry.marksTotal, entry.paperMode, seed);
+    }
+
+    function setQuestionCount(n){
+      const target = Math.max(1, Math.min(50, safeInt(n, 1)));
+      const cur = state.builder.questions.length;
+      if(target > cur){
+        for(let i=cur; i<target; i++) state.builder.questions.push(makeEntry());
+      }else if(target < cur){
+        const ok = window.confirm(`Reduce from ${cur} to ${target} questions? This will remove the last ${cur-target} question(s).`);
+        if(!ok) return;
+        state.builder.questions = state.builder.questions.slice(0, target);
+      }
+      renderBuilderQuestions();
+      els.questionCount.value = String(target);
+    }
+
+    function ensureQuizReady(){
+      const bounds = readBoundariesFromUI();
+      const bErrs = validateBoundaries(bounds);
+      if(bErrs.length){
+        return {ok:false, msg: bErrs.join("\n")};
+      }
+      state.builder.boundaries = bounds;
+
+      if(!state.builder.questions.length){
+        return {ok:false, msg: "Add at least one question."};
+      }
+
+      for(const entry of state.builder.questions){
+        if(!entry.topicCode) return {ok:false, msg: "A question is missing a topic selection."};
+        if(!entry.paperMode) return {ok:false, msg: "A question is missing calculator/non-calculator selection."};
+        if(!entry.marksTotal) return {ok:false, msg: "A question is missing marks selection."};
+      }
+
+      return {ok:true};
+    }
+
+    function buildQuizBlueprint(){
+      const title = els.quizTitle.value.trim() || "Quiz";
+      const blueprint = {
+        id: "quiz_" + Date.now().toString(16) + "_" + randSeed().toString(16),
+        title,
+        createdAt: new Date().toISOString(),
+        bankVersion: state.bank?.version || "",
+        boundaries: state.builder.boundaries.slice().map(b=>({min:b.min, max:b.max, grade:b.grade})),
+        questions: state.builder.questions.map(e => ({
+          topicCode: e.topicCode,
+          paperMode: e.paperMode,
+          marksTotal: Number(e.marksTotal),
+        })),
+      };
+      return blueprint;
+    }
+
+    function totalConfiguredMarks(blueprint){
+      return (blueprint?.questions || []).reduce((s,q)=>s + Number(q.marksTotal||0), 0);
+    }
+
+    /* -------------------- Saved quizzes (localStorage) -------------------- */
+    function loadSavedQuizzes(){
+      try{
+        const raw = localStorage.getItem(LS_KEYS.SAVED);
+        if(!raw) return [];
+        const data = JSON.parse(raw);
+        return Array.isArray(data) ? data : [];
+      }catch(e){
+        return [];
+      }
+    }
+
+    function persistSavedQuizzes(){
+      try{
+        localStorage.setItem(LS_KEYS.SAVED, JSON.stringify(state.savedQuizzes));
+      }catch(e){}
+    }
+
+    function saveBlueprintToHistory(blueprint){
+      // newest first; keep last 50
+      state.savedQuizzes = [blueprint, ...state.savedQuizzes.filter(q=>q.id!==blueprint.id)].slice(0, 50);
+      persistSavedQuizzes();
+    }
+
+    function renderSavedQuizzes(){
+      clearError(els.savedErrors);
+      const list = state.savedQuizzes;
+
+      if(!list.length){
+        els.savedHost.innerHTML = `<div class="muted">No saved quizzes yet. Create one in the dashboard and click <b>Generate quiz</b>.</div>`;
+        return;
+      }
+
+      const rows = list.map((q)=>{
+        const dt = (q.createdAt ? new Date(q.createdAt) : null);
+        const when = dt && !isNaN(dt.getTime()) ? dt.toLocaleString() : "";
+        const qCount = q.questions?.length || 0;
+        const marks = totalConfiguredMarks(q);
+        return `
+          <tr data-qid="${escapeHtmlAttr(q.id)}">
+            <td><b>${escapeHtmlAttr(q.title || "Quiz")}</b><div class="muted" style="font-size:.85rem">Bank: ${escapeHtmlAttr(q.bankVersion||"")}</div></td>
+            <td>${qCount}</td>
+            <td>${marks}</td>
+            <td>${escapeHtmlAttr(when)}</td>
+            <td>
+              <div class="row" style="gap:.45rem">
+                <button type="button" class="secondary" data-action="load">Load</button>
+                <button type="button" class="primary" data-action="preview">Preview</button>
+                <button type="button" class="danger" data-action="delete">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      els.savedHost.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Quiz</th>
+              <th style="width:110px">Questions</th>
+              <th style="width:110px">Marks</th>
+              <th style="width:230px">Created</th>
+              <th style="width:260px">Actions</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    /* -------------------- Student quiz picker -------------------- */
+    function renderStudentQuizPicker(){
+      if(!els.studentQuizSelect || !els.loadStudentQuiz) return;
+      const list = state.savedQuizzes || [];
+
+      if(!list.length){
+        els.studentQuizSelect.innerHTML = `<option value="" selected>No saved quizzes yet</option>`;
+        els.studentQuizSelect.disabled = true;
+        els.loadStudentQuiz.disabled = true;
+        if(els.studentQuizHint){
+          els.studentQuizHint.textContent = "Create a quiz in the Dashboard, then click Generate quiz.";
+        }
+        return;
+      }
+
+      els.studentQuizSelect.disabled = false;
+      els.loadStudentQuiz.disabled = false;
+
+      const opts = list.map(q=>{
+        const qCount = q.questions?.length || 0;
+        const marks = totalConfiguredMarks(q);
+        const label = `${q.title || "Quiz"} (${qCount}Q, ${marks} marks)`;
+        return `<option value="${escapeHtmlAttr(q.id)}">${escapeHtmlAttr(label)}</option>`;
+      }).join("");
+
+      els.studentQuizSelect.innerHTML = opts;
+
+      const curId = state.quizBlueprint?.id;
+      if(curId && list.some(q=>q.id===curId)){
+        els.studentQuizSelect.value = curId;
+      }else{
+        els.studentQuizSelect.value = list[0].id;
+      }
+
+      updateStudentQuizHint();
+    }
+
+    function updateStudentQuizHint(){
+      if(!els.studentQuizHint) return;
+      const id = els.studentQuizSelect?.value || "";
+      const quiz = (state.savedQuizzes || []).find(q=>q.id===id) || null;
+      if(!quiz){
+        els.studentQuizHint.textContent = "";
+        return;
+      }
+      const dt = quiz.createdAt ? new Date(quiz.createdAt) : null;
+      const when = dt && !isNaN(dt.getTime()) ? dt.toLocaleString() : "";
+      const qCount = quiz.questions?.length || 0;
+      const marks = totalConfiguredMarks(quiz);
+      els.studentQuizHint.textContent = `Selected: ${quiz.title || "Quiz"} • ${qCount} question${qCount===1?"":"s"} • ${marks} mark${marks===1?"":"s"}${when ? " • " + when : ""}`;
+    }
+
+    function showStudentLanding(){
+      clearError(els.studentErrors);
+      renderStudentQuizPicker();
+
+      if(!state.quizAttempt){
+        els.studentQuizTitle.textContent = "Student quiz";
+        els.progressDisplay.textContent = "";
+        els.studentMarksDisplay.textContent = "";
+        els.studentQTabsWrap.classList.add("hidden");
+        els.studentQTabs.innerHTML = "";
+        els.studentQuestionHost.innerHTML = `<div class="muted">Select a saved quiz above and click <b>Load</b> to start.</div>`;
+        els.prevQ.disabled = true;
+        els.nextQ.disabled = true;
+        els.submitQuiz.disabled = true;
+        els.restartAttempt.disabled = true;
+        els.resultsPanel.classList.add("hidden");
+        if(els.previewFullscreen){
+          els.previewFullscreen.disabled = true;
+          els.previewFullscreen.textContent = "Preview quiz";
+        }
+        return;
+      }
+
+      // If an attempt already exists, render it.
+      updateStudentQuizHint();
+      if(els.previewFullscreen){
+        els.previewFullscreen.disabled = false;
+        syncFullscreenButton();
+      }
+      els.submitQuiz.disabled = false;
+      els.restartAttempt.disabled = false;
+      renderStudentQuestion(state.student.currentIndex || 0);
+    }
+
+    function loadBlueprintIntoBuilder(blueprint){
+      els.quizTitle.value = blueprint.title || "";
+      state.builder.boundaries = (blueprint.boundaries && blueprint.boundaries.length)
+        ? blueprint.boundaries.map(b=>({min:Number(b.min), max:Number(b.max), grade:String(b.grade)}))
+        : defaultBoundaries();
+      renderBoundaries();
+
+      state.builder.questions = (blueprint.questions || []).map(cfg => ({
+        id: "q_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16),
+        topicCode: cfg.topicCode || (state.bank?.topics?.[0]?.code || "N7"),
+        paperMode: cfg.paperMode === "calc" ? "calc" : "noncalc",
+        marksTotal: Number(cfg.marksTotal) || 1,
+        previewSeed: null,
+        previewInstance: null,
+      }));
+
+      if(!state.builder.questions.length){
+        state.builder.questions = [makeEntry()];
+      }
+
+      els.questionCount.value = String(state.builder.questions.length);
+      renderBuilderQuestions();
+    }
+
+    /* -------------------- Student attempt generation -------------------- */
+    function generateAttemptFromBlueprint(blueprint){
+      const attempt = {
+        blueprintId: blueprint.id,
+        title: blueprint.title,
+        boundaries: blueprint.boundaries,
+        createdAt: blueprint.createdAt,
+        bankVersion: blueprint.bankVersion,
+        attemptId: "attempt_" + Date.now().toString(16) + "_" + randSeed().toString(16),
+        questions: (blueprint.questions || []).map((cfg)=> {
+          const seed = randSeed();
+          const instance = state.bank.generate(cfg.topicCode, cfg.marksTotal, cfg.paperMode, seed);
+          return {
+            topicCode: cfg.topicCode,
+            paperMode: cfg.paperMode,
+            marksTotal: cfg.marksTotal,
+            seed,
+            instance,
+          };
+        }),
+      };
+      return attempt;
+    }
+
+    function startStudentAttempt(newAttempt){
+      state.quizAttempt = newAttempt;
+      state.student.currentIndex = 0;
+      state.student.activeTab = 0;
+      state.student.answers = {};
+      state.student.submitted = false;
+      state.student.marked = false;
+      state.student.result = null;
+      els.resultsPanel.classList.add("hidden");
+      els.resultsSummary.innerHTML = "";
+      els.breakdownContent.innerHTML = "";
+      clearError(els.studentErrors);
+
+      // Keep the quiz selector in sync with the currently loaded quiz
+      renderStudentQuizPicker();
+      updateStudentQuizHint();
+
+      els.submitQuiz.disabled = false;
+      els.restartAttempt.disabled = false;
+      if(els.previewFullscreen){
+        els.previewFullscreen.disabled = false;
+        syncFullscreenButton();
+      }
+
+      els.studentQuizTitle.textContent = state.quizAttempt.title;
+      els.studentMarksDisplay.textContent = `Total marks: ${totalPossibleMarks(state.quizAttempt)}`;
+
+      // Build question tab strip
+      renderStudentTabStrip();
+
+      renderStudentQuestion(0);
+    }
+
+    function totalPossibleMarks(attempt){
+      return (attempt.questions || []).reduce((s,q)=>s + (q.instance?.totalMarks ?? q.marksTotal ?? 0), 0);
+    }
+
+    function renderStudentTabStrip(){
+      const attempt = state.quizAttempt;
+      if(!attempt || !attempt.questions){
+        els.studentQTabsWrap.classList.add("hidden");
+        els.studentQTabs.innerHTML = "";
+        return;
+      }
+      const qCount = attempt.questions.length || 0;
+      if(qCount <= 0){
+        els.studentQTabsWrap.classList.add("hidden");
+        els.studentQTabs.innerHTML = "";
+        return;
+      }
+
+      els.studentQTabsWrap.classList.remove("hidden");
+
+      const activeTab = (state.student && (state.student.activeTab ?? state.student.currentIndex ?? 0));
+      const btns = [];
+      for(let i=0;i<qCount;i++){
+        let statusClass = "";
+        const qRes = (state.student.marked && state.student.result && state.student.result.perQuestion)
+          ? state.student.result.perQuestion[i]
+          : null;
+
+        if(qRes && qRes.max > 0){
+          if(qRes.earned === qRes.max) statusClass = "tab-ok";
+          else if(qRes.earned === 0) statusClass = "tab-bad";
+          else statusClass = "tab-partial";
+        }
+
+        const isActive = (activeTab === "results") ? false : (Number(activeTab) === i);
+        btns.push(`<button type="button" data-qi="${i}" role="tab" ${isActive?'aria-selected="true"':''} class="${(isActive?'active':'')}${statusClass?(' '+statusClass):''}">Q${i+1}</button>`);
+      }
+
+      const isResultsActive = (activeTab === "results");
+      btns.push(`<button type="button" data-action="results" role="tab" ${isResultsActive?'aria-selected="true"':''} class="${isResultsActive?'active':''}">Results</button>`);
+
+      // Show a restart tab only AFTER the quiz has been marked
+      if(state.student.marked){
+        btns.push(`<button type="button" data-action="restart" role="tab">Restart quiz</button>`);
+      }
+
+      els.studentQTabs.innerHTML = btns.join("");
+    }
+
+
+    function setActiveStudentTab(idxOrResults){
+      state.student.activeTab = idxOrResults;
+      const buttons = $$("button", els.studentQTabs);
+      for(const b of buttons){
+        const isResults = b.dataset.action === "results";
+        const qi = b.dataset.qi != null ? Number(b.dataset.qi) : null;
+        const active = (idxOrResults === "results") ? isResults : (qi === idxOrResults);
+        b.classList.toggle("active", !!active);
+        if(active) b.setAttribute("aria-selected","true");
+        else b.removeAttribute("aria-selected");
+      }
+    }
+
+    function renderStudentQuestion(index){
+      const attempt = state.quizAttempt;
+      if(!attempt || !attempt.questions || attempt.questions.length === 0){
+        els.studentQuestionHost.innerHTML = `<div class="muted">No quiz loaded.</div>`;
+        return;
+      }
+
+      const qCount = attempt.questions.length;
+      const idx = Math.max(0, Math.min(qCount-1, index));
+
+      saveCurrentStudentAnswers();
+      state.student.currentIndex = idx;
+
+      const qWrap = attempt.questions[idx];
+      const q = qWrap.instance;
+
+      els.progressDisplay.textContent = `Question ${idx+1} of ${qCount}`;
+      els.prevQ.disabled = (idx===0);
+      els.nextQ.disabled = (idx===qCount-1);
+
+      setActiveStudentTab(idx);
+
+      const modeTag = (qWrap.paperMode === "calc")
+        ? `<span class="mode-tag calc">Calculator</span>`
+        : `<span class="mode-tag noncalc">Non-calculator</span>`;
+
+      const readonly = !!(state.student.submitted || state.student.marked);
+
+      els.studentQuestionHost.innerHTML = `
+        <div class="qmeta">
+          <span class="topic">${escapeHtmlAttr(q.topicName || q.topicCode)}</span>
+          ${modeTag}
+          <span class="muted">• ${q.totalMarks} mark${q.totalMarks===1?"":"s"}</span>
+        </div>
+        ${renderQuestionInstance(q, {readonly, qIndex: idx})}
+      `;
+
+      hydrateAnswersForQuestion(idx);
+
+      if(state.student.marked) decorateMarkedQuestion(idx);
+    }
+
+    function decorateMarkedQuestion(qi){
+      const result = state.student.result;
+      if(!result || !result.perQuestion || !result.perQuestion[qi]) return;
+
+      const host = els.studentQuestionHost;
+      const qRes = result.perQuestion[qi];
+
+      for(const pr of (qRes.parts || [])){
+        const pid = pr.pid;
+        const kind = pr.kind;
+
+        // Pair inputs: mark each sub-box separately
+        if(kind === "pair" && Array.isArray(pr.components)){
+          for(let si=0; si<pr.components.length; si++){
+            const ok = !!pr.components[si];
+            const input = host.querySelector(`input.ans[data-qindex="${qi}"][data-partid="${pid}"][data-sub="${si}"]`);
+            const pm = host.querySelector(`span.pm[data-partid="${pid}"][data-sub="${si}"]`);
+            if(input){
+              input.classList.remove("correct","incorrect","partial");
+              input.classList.add(ok ? "correct" : "incorrect");
+            }
+            if(pm){
+              pm.classList.remove("hidden","ok","bad","partial");
+              pm.classList.add(ok ? "ok" : "bad");
+              pm.textContent = ok ? "✓" : "✕";
+            }
+          }
+          continue;
+        }
+
+        // Single input
+        const input = host.querySelector(`input.ans[data-qindex="${qi}"][data-partid="${pid}"]:not([data-sub])`);
+        const pm = host.querySelector(`span.pm[data-partid="${pid}"]:not([data-sub])`);
+        if(!input && !pm) continue;
+
+        const status = (pr.earned === pr.max) ? "ok" : (pr.earned === 0 ? "bad" : "partial");
+        const icon = (status === "ok") ? "✓" : (status === "bad" ? "✕" : "•");
+
+        if(input){
+          input.classList.remove("correct","incorrect","partial");
+          input.classList.add(status === "ok" ? "correct" : (status === "bad" ? "incorrect" : "partial"));
+        }
+        if(pm){
+          pm.classList.remove("hidden","ok","bad","partial");
+          pm.classList.add(status);
+          pm.textContent = icon;
+        }
+      }
+    }
+
+    function renderStudentResultsPage(){
+      const attempt = state.quizAttempt;
+      if(!attempt){
+        els.studentQuestionHost.innerHTML = `<div class="muted">No quiz loaded.</div>`;
+        return;
+      }
+
+      setActiveStudentTab("results");
+
+      const marked = !!(state.student.marked && state.student.result);
+      const r = state.student.result;
+
+      const actions = `
+        <div class="row wrap between" style="margin:.25rem 0 1rem">
+          <div class="row wrap">
+            <button type="button" class="primary" data-action="markAll" ${marked ? "disabled" : ""}>${marked ? "Marked" : "Mark all questions"}</button>
+          </div>
+          <div class="muted">${getFullscreenElement() ? "Press Esc to exit fullscreen." : ""}</div>
+        </div>
+      `;
+
+      let summary = `<p class="muted" style="margin:0 0 .8rem">Click <b>Mark all questions</b> to see your score and a colour breakdown (heat map).</p>`;
+      let heatmap = "";
+
+      if(marked && r){
+        const pct = Math.round(r.percent);
+        summary = `
+          <div class="results-summary" style="margin-top:.4rem">
+            <div class="metric"><div class="label">Score</div><div class="value">${r.totalEarn} / ${r.totalMax}</div></div>
+            <div class="metric"><div class="label">Percentage</div><div class="value">${pct}%</div></div>
+            <div class="metric"><div class="label">Grade</div><div class="value">${escapeHtmlAttr(r.grade || "—")}</div></div>
+          </div>
+          <p class="muted" style="margin:.6rem 0 0">Use the tabs above to review questions. ✓ correct, ✕ incorrect.</p>
+        `;
+
+        const rows = (r.perQuestion || []).map((qRes)=>{
+          const cls = (qRes.earned === qRes.max) ? "mark-green" : (qRes.earned === 0 ? "mark-red" : "mark-orange");
+          const modeTag = (qRes.paperMode === "calc")
+            ? `<span class="mode-tag calc">Calculator</span>`
+            : `<span class="mode-tag noncalc">Non-calculator</span>`;
+          return `
+            <tr>
+              <td><button type="button" class="link" data-action="goto" data-qi="${qRes.qi}">Q${qRes.qi+1}</button></td>
+              <td>${escapeHtmlAttr((qRes.topicCode || "") + (qRes.topicName ? " — " + qRes.topicName : ""))}</td>
+              <td>${modeTag}</td>
+              <td class="mark-cell ${cls}">${qRes.earned} / ${qRes.max}</td>
+            </tr>
+          `;
+        }).join("");
+
+        heatmap = `
+          <h3 style="margin:1rem 0 .4rem">Heat map</h3>
+          <table class="heatmap" aria-label="Marks heat map">
+            <thead>
+              <tr>
+                <th style="width:6rem">Question</th>
+                <th>Topic</th>
+                <th style="width:10rem">Mode</th>
+                <th style="width:8rem">Marks</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      }
+
+      els.studentQuestionHost.innerHTML = `
+        <div class="qmeta">
+          <span class="topic">Results</span>
+          <span class="muted">• ${escapeHtmlAttr(attempt.title || "Quiz")}</span>
+        </div>
+        ${actions}
+        ${summary}
+        ${heatmap}
+      `;
+    }
+
+
+    /* -------------------- Question rendering -------------------- */
+    function renderQuestionInstance(question, opts){
+      const readonly = !!opts.readonly;
+      const qIndex = Number(opts.qIndex ?? 0);
+      const parts = question.parts || [];
+      let noteInserted = false;
+      const htmlParts = parts.map((p)=>{
+        if(!p) return "";
+        const hasInput = !!p.input;
+
+        const partText = `<div class="part-text">${p.textHtml || ""}</div>`;
+        if(!hasInput){
+          return `<div class="part full">${partText}</div>`;
+        }
+
+        let inputHtml = renderInputForPart(p, {readonly, qIndex});
+        if(!noteInserted){
+          inputHtml = `<div class="unitnote">Do not include units in your answer.</div>` + inputHtml;
+          noteInserted = true;
+        }
+        return `<div class="part">${partText}<div class="part-answer">${inputHtml}</div></div>`;
+      }).join("");
+
+      return `<div class="question-card">${htmlParts}</div>`;
+    }
+
+    function renderInputForPart(part, opts){
+      const pid = part.input.id;
+      const qIndex = opts.qIndex;
+      const kind = part.input.kind;
+      const readonly = !!opts.readonly;
+
+      const baseAttrs = `
+        class="ans"
+        data-qindex="${qIndex}"
+        data-kind="${escapeHtmlAttr(kind)}"
+        data-partid="${escapeHtmlAttr(pid)}"
+        id="ans_${escapeHtmlAttr(qIndex)}_${escapeHtmlAttr(pid)}"
+        ${readonly ? "disabled" : ""}
+        autocomplete="off"
+        inputmode="decimal"
+      `;
+
+      const inferUnit = ()=>{
+        const txt = (part.textHtml||"").toLowerCase();
+        // Heuristics: pick the first matching unit-ish token we can see in the question text.
+        const candidates = [
+          "kwh","kw","m²","cm²","mm²","km²",
+          "°c","°f","°",
+          "cm","mm","km","m",
+          "metres","meters","metre","meter",
+          "litres","litre","l","ml",
+          "kg","g",
+          "minutes","minute","min",
+          "hours","hour","h",
+          "seconds","second","sec","s",
+          "days","day",
+          "pages","bags","trips","sessions","tickets","items","people","containers","cups","jugs","laps","floors","floor"
+        ];
+
+        // If the question explicitly says “in ___”, use that.
+        const inMatch = txt.match(/\(in\s+([^)]+)\)/);
+        if(inMatch && inMatch[1]){
+          const unit = inMatch[1].trim();
+          if(unit.length <= 14) return unit;
+        }
+
+        // Speed “km per hour” appears as text sometimes
+        if(txt.includes("km per hour") || txt.includes("kilometres per hour")) return "km/h";
+
+        // temperature
+        if(txt.includes("°c") || txt.includes("temperature")) return "°C";
+
+        // floor (integer)
+        if(txt.includes("floor")) return "floor";
+
+        // “How many ___” count placeholder
+        const howMany = txt.match(/how many\s+([a-z]+)/);
+        if(howMany && howMany[1]) return howMany[1];
+
+        for(const c of candidates){
+          if(txt.includes(c)){
+            if(c === "metres" || c === "meters" || c === "metre" || c === "meter") return "m";
+            if(c === "litres" || c === "litre") return "L";
+            if(c === "minutes" || c === "minute") return "min";
+            if(c === "hours" || c === "hour") return "h";
+            if(c === "seconds" || c === "second" || c === "sec") return "s";
+            if(c === "floors") return "floor";
+            if(c === "°c") return "°C";
+            if(c === "ml") return "mL";
+            return c;
+          }
+        }
+        return "";
+      };
+
+      if(kind === "pair"){
+        const [phA, phB] = part.input.placeholders || ["first", "second"];
+        return `
+          <div class="ans-row">
+            <div class="answrap">
+              <input type="text" ${baseAttrs} data-sub="0" placeholder="${escapeHtmlAttr(phA)}" />
+              <span class="pm hidden" data-partid="${escapeHtmlAttr(pid)}" data-sub="0" aria-hidden="true"></span>
+            </div>
+            <div class="answrap">
+              <input type="text" ${baseAttrs} data-sub="1" placeholder="${escapeHtmlAttr(phB)}" />
+              <span class="pm hidden" data-partid="${escapeHtmlAttr(pid)}" data-sub="1" aria-hidden="true"></span>
+            </div>
+          </div>
+        `;
+      }
+
+      // Use unit placeholders like the worksheet bank (money uses £; others are inferred from the question text)
+      const explicit = (typeof part.input?.placeholder === "string" && part.input.placeholder.trim())
+        ? part.input.placeholder.trim()
+        : "";
+      let ph = "";
+      if(explicit){
+        ph = explicit;
+      }else if(kind === "money"){
+        ph = "£";
+      }else{
+        ph = inferUnit();
+        if(!ph) ph = "answer";
+      }
+
+      return `
+        <div class="answrap">
+          <input type="text" ${baseAttrs} placeholder="${escapeHtmlAttr(ph)}" />
+          <span class="pm hidden" data-partid="${escapeHtmlAttr(pid)}" aria-hidden="true"></span>
+        </div>
+      `;
+    }
+
+    /* -------------------- Student answer capture + marking -------------------- */
+    function hydrateAnswersForQuestion(qIndex){
+      const saved = state.student.answers[qIndex];
+      if(!saved) return;
+      const inputs = $$("input.ans", els.studentQuestionHost);
+      for(const inp of inputs){
+        const pid = inp.dataset.partid;
+        const kind = inp.dataset.kind;
+        const sub = inp.dataset.sub;
+        const rec = saved[pid];
+        if(rec == null) continue;
+
+        if(kind==="pair"){
+          if(Array.isArray(rec) && sub != null){
+            const i = Number(sub);
+            inp.value = (rec[i]?.raw ?? "");
+          }
+        }else{
+          if(typeof rec === "object" && rec && "raw" in rec){
+            inp.value = rec.raw;
+          }
+        }
+      }
+    }
+
+    function normaliseRaw(raw){
+      return String(raw ?? "").replace(/−/g, "-").trim();
+    }
+
+    function parseNum(raw){
+      const s0 = normaliseRaw(raw);
+      if(!s0) return NaN;
+      let s = s0.replace(/,/g, "");
+      s = s.replace(/£/g, "");
+      // Allow fractions a/b
+      if(s.includes("/")){
+        const m = s.match(/^(-?\d+(?:\.\d+)?)\s*\/\s*(-?\d+(?:\.\d+)?)$/);
+        if(!m) return NaN;
+        const n = Number(m[1]), d = Number(m[2]);
+        if(!Number.isFinite(n) || !Number.isFinite(d) || d===0) return NaN;
+        return n/d;
+      }
+      const n = Number(s);
+      return Number.isFinite(n) ? n : NaN;
+    }
+
+    function countDp(raw){
+      const s = normaliseRaw(raw);
+      const m = s.match(/\.(\d+)/);
+      return m ? m[1].length : 0;
+    }
+
+    function saveCurrentStudentAnswers(){
+      const idx = state.student.currentIndex;
+      const attempt = state.quizAttempt;
+      if(!attempt) return;
+      const qWrap = attempt.questions[idx];
+      if(!qWrap) return;
+      const q = qWrap.instance;
+      const saved = state.student.answers[idx] || {};
+
+      for(const part of (q.parts || [])){
+        if(!part || !part.input) continue;
+        const pid = part.input.id;
+        const kind = part.input.kind;
+
+        if(kind==="pair"){
+          const inps = $$(`input.ans[data-partid="${pid}"][data-kind="pair"]`, els.studentQuestionHost);
+          const rec = [];
+          for(const inp of inps){
+            const sub = Number(inp.dataset.sub || 0);
+            const raw = inp.value;
+            rec[sub] = {raw, num: parseNum(raw)};
+          }
+          saved[pid] = rec;
+        }else{
+          const inp = $(`input.ans[data-partid="${pid}"]:not([data-kind="pair"])`, els.studentQuestionHost);
+          if(!inp) continue;
+          const raw = inp.value;
+          saved[pid] = {raw, num: parseNum(raw)};
+        }
+      }
+      state.student.answers[idx] = saved;
+    }
+
+    function closeEnough(a,b,tol=1e-9){
+      return Math.abs(a-b) <= tol;
+    }
+
+    function submitQuiz(){
+      saveCurrentStudentAnswers();
+      clearError(els.studentErrors);
+      if(!state.quizAttempt) return;
+      if(state.student.submitted) return;
+
+      state.student.submitted = true;
+
+      els.submitQuiz.disabled = true;
+
+      // Reveal Results tab + lock inputs (no results shown until the Results tab is opened)
+      renderStudentTabStrip();
+
+      // Re-render current question so inputs become readonly/disabled
+      renderStudentQuestion(state.student.currentIndex || 0);
+    }
+
+    function computeMarking(){
+      const attempt = state.quizAttempt;
+      const totalMax = totalPossibleMarks(attempt);
+      let totalEarn = 0;
+
+      const perQuestion = [];
+      for(let qi=0; qi<attempt.questions.length; qi++){
+        const qWrap = attempt.questions[qi];
+        const q = qWrap.instance;
+        const ans = state.student.answers[qi] || {};
+
+        let qEarn = 0;
+        let qMax = 0;
+        const parts = [];
+
+        for(const part of (q.parts || [])){
+          const pid = part.input.id;
+          const kind = part.input.kind;
+          const marks = Number(part.marks) || 0;
+          qMax += marks;
+
+          const expected = part.answer;
+          const user = ans[pid];
+          const res = markPart(kind, marks, expected, user);
+
+          qEarn += res.earned;
+          parts.push({
+            pid,
+            kind,
+            earned: res.earned,
+            max: marks,
+            note: res.note || "",
+            components: res.components || null,
+          });
+        }
+
+        totalEarn += qEarn;
+        perQuestion.push({
+          qi,
+          topicCode: q.topicCode,
+          topicName: q.topicName || q.topicCode,
+          paperMode: qWrap.paperMode,
+          earned: qEarn,
+          max: qMax,
+          parts,
+        });
+      }
+
+      const percent = totalMax > 0 ? (totalEarn/totalMax*100) : 0;
+      const grade = gradeFromPercent(percent, attempt.boundaries);
+
+      return { totalEarn, totalMax, percent, grade, perQuestion };
+    }
+
+    function markAllQuestions(){
+      saveCurrentStudentAnswers();
+      clearError(els.studentErrors);
+      if(!state.quizAttempt) return;
+
+      if(!state.student.submitted){
+        submitQuiz();
+      }
+
+      state.student.result = computeMarking();
+      state.student.marked = true;
+
+      renderStudentTabStrip();
+      renderStudentResultsPage();
+    }
+
+
+    function markPart(kind, marks, expected, user){
+      // expected: {type:"number"|"rounded"|"pair", value|values...}
+      if(!user) return {earned:0, note:"No answer given."};
+
+      // Pair answers (two boxes) — return per-box correctness for ✓/✕ display
+      if(kind === "pair"){
+        const exVals = Array.isArray(expected?.values) ? expected.values : [];
+        const uVals = Array.isArray(user) ? user : [];
+        const uA = uVals[0]?.num;
+        const uB = uVals[1]?.num;
+
+        const okA = Number.isFinite(uA) && closeEnough(uA, Number(exVals[0]), 1e-6);
+        const okB = Number.isFinite(uB) && closeEnough(uB, Number(exVals[1]), 1e-6);
+        const correctCount = (okA?1:0) + (okB?1:0);
+
+        let earned = Math.floor((Number(marks)||0) * correctCount / 2);
+        if((Number(marks)||0) === 1){
+          earned = (correctCount === 2) ? 1 : 0;
+        }
+
+        let note = "Incorrect.";
+        if(correctCount === 2) note = "Correct.";
+        else if(correctCount === 1) note = "Partially correct.";
+        else if(!Number.isFinite(uA) && !Number.isFinite(uB)) note = "No valid numbers entered.";
+
+        return {earned, note, components:[okA, okB]};
+      }
+
+      const uRaw = (user.raw||"").trim();
+      const uNum = user.num;
+
+      if(!uRaw) return {earned:0, note:"No answer given."};
+      if(!Number.isFinite(uNum)) return {earned:0, note:"Not a valid number."};
+
+      if(kind === "integer" && !Number.isInteger(uNum)){
+        return {earned:0, note:"Must be an integer."};
+      }
+
+      // Rounded answers (e.g., “to 2 d.p.”)
+      if(expected.type === "rounded"){
+        const places = expected.places;
+        const exact = Number(expected.value);
+        const rounded = Number(expected.rounded);
+
+        const isExact = closeEnough(uNum, exact, 1e-9);
+        const isRounded = closeEnough(uNum, rounded, 1e-9);
+
+        if(isExact){
+          return {earned: marks, note:"Exact value given (unrounded)."};
+        }
+
+        if(isRounded){
+          return {earned: marks, note:`Correct (rounded to ${places} d.p.).`};
+        }
+
+        return {earned: 0, note:"Incorrect."};
+      }
+
+      const ok = closeEnough(uNum, Number(expected.value), 1e-6);
+      return {earned: ok ? marks : 0, note: ok ? "Correct." : "Incorrect."};
+    }
+
+    function gradeFromPercent(pct, boundaries){
+      const p = Number(pct);
+      const b = (boundaries || []).slice().sort((a,b)=>a.min-b.min);
+      for(const r of b){
+        if(p >= r.min && p <= r.max) return String(r.grade);
+      }
+      return "";
+    }
+
+    function renderResults(res){
+      els.resultsPanel.classList.remove("hidden");
+
+      const pct1 = Math.round(res.percent*10)/10;
+      const grade = res.grade || "—";
+
+      els.resultsSummary.innerHTML = `
+        <div class="metric"><div class="k">Score</div><div class="v">${res.totalEarn} / ${res.totalMax}</div></div>
+        <div class="metric"><div class="k">Percentage</div><div class="v">${pct1}%</div></div>
+        <div class="metric"><div class="k">Grade</div><div class="v">${escapeHtmlAttr(grade)}</div></div>
+        <div class="metric"><div class="k">Questions</div><div class="v">${state.quizAttempt.questions.length}</div></div>
+      `;
+
+      els.breakdownContent.innerHTML = res.breakdown.map(q=>{
+        const parts = q.parts.map(p=>{
+          const safeNote = escapeHtmlAttr(p.note || "");
+          return `
+            <div style="padding:.7rem .75rem;border:1px solid var(--border);border-radius:.7rem;background:var(--panel2);margin-top:.7rem">
+              <div class="muted" style="font-weight:900">${p.earned}/${p.max} marks • ${safeNote}</div>
+              <div style="margin-top:.35rem">${p.text}</div>
+            </div>
+          `;
+        }).join("");
+
+        return `
+          <div style="margin-top:1rem">
+            <div style="font-weight:900">${escapeHtmlAttr(q.title)} — ${q.earned}/${q.max}</div>
+            ${parts}
+          </div>
+        `;
+      }).join("");
+
+      // Activate Results tab (if shown)
+      if(state.quizAttempt.questions.length > 1){
+        setActiveStudentTab("results");
+      }
+
+      els.resultsPanel.scrollIntoView({behavior:"smooth", block:"start"});
+    }
+
+    /* -------------------- Events -------------------- */
+    els.themeToggle.addEventListener("click", ()=>{
+      const isDark = document.body.classList.contains("dark");
+      applyTheme(isDark ? "light" : "dark");
+    });
+
+    // Student-side theme toggle (left sidebar)
+    if(els.studentThemeToggle){
+      els.studentThemeToggle.addEventListener("click", ()=>{
+        const isDark = document.body.classList.contains("dark");
+        applyTheme(isDark ? "light" : "dark");
+      });
+    }
+
+    // Student overlays (blue/yellow) — left sidebar
+    if(els.a11yPanel){
+      els.a11yPanel.addEventListener("click", (e)=>{
+        const btn = e.target.closest("button[data-overlay]");
+        if(!btn) return;
+        applyOverlay(btn.dataset.overlay);
+      });
+    }
+
+    // Student quiz picker
+    els.studentQuizSelect.addEventListener("change", ()=>{
+      updateStudentQuizHint();
+    });
+    els.loadStudentQuiz.addEventListener("click", ()=>{
+      clearError(els.studentErrors);
+      if(!state.bank){
+        showError(els.studentErrors, "Question bank not loaded yet. Please wait a moment and try again.");
+        return;
+      }
+      const id = els.studentQuizSelect.value;
+      const quiz = (state.savedQuizzes || []).find(q=>q.id===id) || null;
+      if(!quiz){
+        showError(els.studentErrors, "Please select a saved quiz to load.");
+        return;
+      }
+      state.quizBlueprint = quiz;
+      updateStudentTabEnabled();
+      const attempt = generateAttemptFromBlueprint(quiz);
+      startStudentAttempt(attempt);
+      switchView("student");
+    });
+
+
+    // Student fullscreen preview (opens the quiz in fullscreen; Esc exits)
+    if(els.previewFullscreen){
+      els.previewFullscreen.addEventListener("click", async ()=>{
+      clearError(els.studentErrors);
+
+      // If already in fullscreen, exit (Escape also works)
+      if(getFullscreenElement()){
+        try{ await exitFullscreen(); }catch(_e){}
+        syncFullscreenButton();
+        return;
+      }
+
+      if(!state.quizBlueprint){
+        showError(els.studentErrors, "No quiz loaded.");
+        return;
+      }
+
+      // Entering preview always starts a fresh random attempt (new random numbers)
+      const attempt = generateAttemptFromBlueprint(state.quizBlueprint);
+      startStudentAttempt(attempt);
+
+      try{
+        await requestFullscreen(els.studentView);
+        try{ els.studentQuestionHost.scrollIntoView({behavior:"auto", block:"start"}); }catch(_e){}
+      }catch(err){
+        console.error(err);
+        showError(els.studentErrors, "Fullscreen failed. Your browser may block fullscreen without a user gesture.");
+      }
+
+      syncFullscreenButton();
+    });
+
+      const fsSync = ()=>syncFullscreenButton();
+      document.addEventListener("fullscreenchange", fsSync);
+      document.addEventListener("webkitfullscreenchange", fsSync);
+      document.addEventListener("msfullscreenchange", fsSync);
+    }
+
+    els.tabBuilder.addEventListener("click", ()=>switchView("builder"));
+    els.tabQuizzes.addEventListener("click", ()=>{
+      switchView("quizzes");
+      renderSavedQuizzes();
+    });
+    els.tabStudent.addEventListener("click", ()=>{
+      if(els.tabStudent.disabled) return;
+      switchView("student");
+      showStudentLanding();
+    });
+
+    els.addBoundary.addEventListener("click", ()=>{
+      state.builder.boundaries.push({min:0, max:0, grade:""});
+      renderBoundaries();
+    });
+
+    els.resetBoundaries.addEventListener("click", ()=>{
+      state.builder.boundaries = defaultBoundaries();
+      renderBoundaries();
+    });
+
+    els.boundariesBody.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-action]");
+      if(!btn) return;
+      if(btn.dataset.action==="removeBoundary"){
+        const tr = btn.closest("tr[data-bidx]");
+        if(!tr) return;
+        const idx = Number(tr.dataset.bidx);
+        state.builder.boundaries.splice(idx, 1);
+        renderBoundaries();
+      }
+    });
+
+    els.applyCount.addEventListener("click", ()=>{
+      setQuestionCount(els.questionCount.value);
+    });
+
+    els.addQuestion.addEventListener("click", ()=>{
+      state.builder.questions.push(makeEntry());
+      els.questionCount.value = String(state.builder.questions.length);
+      renderBuilderQuestions();
+    });
+
+    els.questionsList.addEventListener("change", (e)=>{
+      const entryEl = e.target.closest(".q-entry");
+      if(!entryEl) return;
+      const qid = entryEl.dataset.qid;
+      const entry = findEntryById(qid);
+      if(!entry) return;
+
+      const field = e.target?.dataset?.field;
+      if(field==="topic"){
+        entry.topicCode = e.target.value;
+        invalidateEntry(entry);
+      }else if(field==="paper"){
+        entry.paperMode = e.target.value;
+        invalidateEntry(entry);
+      }else if(field==="marks"){
+        entry.marksTotal = safeInt(e.target.value, 1);
+        invalidateEntry(entry);
+      }
+      renderBuilderQuestions();
+    });
+
+    els.questionsList.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-action]");
+      if(!btn) return;
+      const entryEl = btn.closest(".q-entry");
+      if(!entryEl) return;
+      const qid = entryEl.dataset.qid;
+      const entry = findEntryById(qid);
+      if(!entry) return;
+
+      const action = btn.dataset.action;
+      if(action==="remove"){
+        const idx = state.builder.questions.findIndex(q=>q.id===qid);
+        if(idx>=0){
+          state.builder.questions.splice(idx, 1);
+          if(!state.builder.questions.length){
+            state.builder.questions.push(makeEntry());
+          }
+          els.questionCount.value = String(state.builder.questions.length);
+          renderBuilderQuestions();
+        }
+      }
+      if(action==="preview"){
+        generatePreviewForEntry(entry);
+        renderBuilderQuestions();
+      }
+    });
+
+    els.generateQuiz.addEventListener("click", ()=>{
+      clearError(els.builderErrors);
+
+      const ready = ensureQuizReady();
+      if(!ready.ok){
+        showError(els.builderErrors, ready.msg);
+        return;
+      }
+
+      // Build & save blueprint (no locked numbers)
+      const blueprint = buildQuizBlueprint();
+      state.quizBlueprint = blueprint;
+      saveBlueprintToHistory(blueprint);
+
+      // Generate a NEW random attempt now (ignores any preview seed)
+      const attempt = generateAttemptFromBlueprint(blueprint);
+      state.quizAttempt = attempt;
+
+      // Enable student tab and switch
+      updateStudentTabEnabled();
+      switchView("student");
+      startStudentAttempt(attempt);
+    });
+
+    // Student Q-tab navigation
+    els.studentQTabs.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button");
+      if(!btn) return;
+
+      if(btn.dataset.action === "results"){
+        saveCurrentStudentAnswers();
+        renderStudentResultsPage();
+        return;
+      }
+
+      if(btn.dataset.action === "restart"){
+        if(!state.quizBlueprint){
+          showError(els.studentErrors, "No quiz loaded.");
+          return;
+        }
+        const ok = window.confirm("Restart quiz with new random numbers? This will clear your answers.");
+        if(!ok) return;
+        const attempt = generateAttemptFromBlueprint(state.quizBlueprint);
+        startStudentAttempt(attempt);
+        return;
+      }
+
+      if(btn.dataset.qi != null){
+        renderStudentQuestion(Number(btn.dataset.qi));
+      }
+    });
+
+    // Results tab actions (Mark all / New random attempt / jump to question)
+    els.studentQuestionHost.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button");
+      if(!btn) return;
+
+      if(btn.dataset.action === "markAll"){
+        markAllQuestions();
+        return;
+      }
+
+      if(btn.dataset.action === "newAttempt"){
+        if(!state.quizBlueprint){
+          showError(els.studentErrors, "No quiz blueprint found.");
+          return;
+        }
+        if(!confirm("Start a new random attempt? Your current attempt will be cleared.")) return;
+        const attempt = generateAttemptFromBlueprint(state.quizBlueprint);
+        startStudentAttempt(attempt);
+        return;
+      }
+
+      if(btn.dataset.action === "goto" && btn.dataset.qi != null){
+        renderStudentQuestion(Number(btn.dataset.qi));
+        return;
+      }
+    });
+
+
+    els.prevQ.addEventListener("click", ()=>{
+      renderStudentQuestion(state.student.currentIndex - 1);
+    });
+    els.nextQ.addEventListener("click", ()=>{
+      renderStudentQuestion(state.student.currentIndex + 1);
+    });
+
+    els.restartAttempt.addEventListener("click", ()=>{
+      if(!state.quizBlueprint) return;
+      const ok = window.confirm("Start a new random attempt? This will clear answers and regenerate all numbers.");
+      if(!ok) return;
+      const attempt = generateAttemptFromBlueprint(state.quizBlueprint);
+      startStudentAttempt(attempt);
+    });
+
+    els.backToBuilder.addEventListener("click", ()=>{
+      // If we are in fullscreen preview, exit first (otherwise the dashboard would be hidden).
+      if(getFullscreenElement()){
+        exitFullscreen().catch(()=>{}).finally(()=>switchView("builder"));
+      }else{
+        switchView("builder");
+      }
+    });
+
+    els.submitQuiz.addEventListener("click", ()=>{
+      if(!state.quizAttempt) return;
+      submitQuiz();
+    });
+
+    // Saved quiz actions
+    els.refreshSaved.addEventListener("click", ()=>{
+      state.savedQuizzes = loadSavedQuizzes();
+      updateStudentTabEnabled();
+      renderStudentQuizPicker();
+      renderSavedQuizzes();
+    });
+
+    els.clearSaved.addEventListener("click", ()=>{
+      const ok = window.confirm("Clear all saved quizzes from this browser?");
+      if(!ok) return;
+      state.savedQuizzes = [];
+      persistSavedQuizzes();
+      updateStudentTabEnabled();
+      renderStudentQuizPicker();
+      renderSavedQuizzes();
+      if(els.studentView.classList.contains("active")) showStudentLanding();
+    });
+
+    els.savedHost.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-action]");
+      if(!btn) return;
+      const tr = btn.closest("tr[data-qid]");
+      if(!tr) return;
+      const qid = tr.dataset.qid;
+      const quiz = state.savedQuizzes.find(q=>q.id===qid);
+      if(!quiz) return;
+
+      const action = btn.dataset.action;
+      if(action==="delete"){
+        const ok = window.confirm(`Delete "${quiz.title || "Quiz"}" from saved quizzes?`);
+        if(!ok) return;
+        state.savedQuizzes = state.savedQuizzes.filter(q=>q.id!==qid);
+        persistSavedQuizzes();
+        updateStudentTabEnabled();
+        renderStudentQuizPicker();
+        renderSavedQuizzes();
+        if(els.studentView.classList.contains("active")) showStudentLanding();
+        return;
+      }
+      if(action==="load"){
+        loadBlueprintIntoBuilder(quiz);
+        switchView("builder");
+        return;
+      }
+      if(action==="preview"){
+        state.quizBlueprint = quiz;
+        updateStudentTabEnabled();
+        const attempt = generateAttemptFromBlueprint(quiz);
+        startStudentAttempt(attempt);
+        switchView("student");
+        return;
+      }
+    });
+
+    /* -------------------- Init -------------------- */
+    async function init(){
+      initTheme();
+      initOverlay();
+      clearError(els.builderErrors);
+
+      // Load saved quizzes
+      state.savedQuizzes = loadSavedQuizzes();
+      updateStudentTabEnabled();
+      renderStudentQuizPicker();
+
+      // Load question bank via fetch (GitHub Pages compatible)
+      try{
+        const res = await fetch("./questionBank.js", {cache:"no-store"});
+        if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const code = await res.text();
+
+        const s = document.createElement("script");
+        s.textContent = code;
+        document.head.appendChild(s);
+
+        if(!window.QuestionBank || !window.QuestionBank.generate){
+          throw new Error("QuestionBank did not load (window.QuestionBank is missing).");
+        }
+
+        state.bank = window.QuestionBank;
+        els.bankStatus.textContent = `Question bank loaded: ${state.bank.topics.length} topic(s) • version ${state.bank.version}`;
+      }catch(err){
+        els.bankStatus.textContent = "Question bank failed to load.";
+        showError(els.builderErrors,
+          "The question bank could not be loaded.\n\n" +
+          "Checklist:\n" +
+          "1) Make sure questionBank.js is in the SAME folder as index.html.\n" +
+          "2) Open the site on the GitHub Pages URL (https://<user>.github.io/<repo>/), not the github.com file view.\n" +
+          "3) If testing locally, use a local server (e.g. python -m http.server) because fetch is blocked on file://.\n\n" +
+          "Error: " + (err && err.message ? err.message : String(err))
+        );
+        return;
+      }
+
+      // Boundaries defaults
+      state.builder.boundaries = defaultBoundaries();
+      renderBoundaries();
+
+      // Start with the chosen question count
+      state.builder.questions = [];
+      setQuestionCount(els.questionCount.value);
+
+      renderBuilderQuestions();
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>
